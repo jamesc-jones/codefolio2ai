@@ -1,6 +1,8 @@
 ﻿using CodeFolio.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace CodeFolio.Data;
 
@@ -10,27 +12,35 @@ public class DbInitializer
     {
         var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+        var logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(DbInitializer));
 
         string adminEmail = "admin@example.com";
-        string adminPassword = "Pippen$33scottie";
 
         // Create Admin Role if it doesn't exist - Ensure that Admin role exists
         if (!await roleManager.RoleExistsAsync("Admin"))
         {
             await roleManager.CreateAsync(new IdentityRole("Admin"));
         }
-        
+
         // Create User Role if it doesn't exist
         if (!await roleManager.RoleExistsAsync("User"))
         {
             await roleManager.CreateAsync(new IdentityRole("User"));
         }
 
-        // Delete existing admin user if it exists (force re-creation)
+        // Only create the admin user if it doesn't already exist — never delete existing data.
         var existingUser = await userManager.FindByEmailAsync(adminEmail);
         if (existingUser != null)
         {
-            await userManager.DeleteAsync(existingUser);
+            return;
+        }
+
+        var adminPassword = configuration["Seed:AdminPassword"];
+        if (string.IsNullOrEmpty(adminPassword))
+        {
+            logger.LogWarning("Seed:AdminPassword is not configured. Skipping admin user creation.");
+            return;
         }
 
         // Create new Admin user with claims
@@ -51,6 +61,10 @@ public class DbInitializer
             await userManager.AddClaimAsync(user, new System.Security.Claims.Claim("FirstName", user.FirstName));
             await userManager.AddClaimAsync(user, new System.Security.Claims.Claim("LastName", user.LastName));
         }
+        else
+        {
+            logger.LogWarning("Failed to create admin user: {Errors}", string.Join(", ", result.Errors.Select(e => e.Description)));
+        }
     }
     
     // Added this method to seed ResumeSections
@@ -59,14 +73,12 @@ public class DbInitializer
         using var scope = serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        // Delete all existing ResumeSections first 
+        // Seed only when the table is empty — never remove existing rows.
         if (await context.ResumeSections.AnyAsync())
         {
-            context.ResumeSections.RemoveRange(context.ResumeSections);
-            await context.SaveChangesAsync();
+            return;
         }
 
-        // Then re-add the default seed data
         context.ResumeSections.AddRange(
                 new ResumeSection
                 {

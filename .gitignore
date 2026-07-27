@@ -1,0 +1,18 @@
+.env
+.env.*
+!.env.example
+
+# Build output
+bin/
+obj/
+
+# IDE
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Playwright MCP browser QA artifacts
+.playwright-mcp/

@@ -29,9 +29,10 @@ builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, AppClai
 // Add the RoleManager service explicitly (this is needed to handle roles)
 builder.Services.AddScoped<RoleManager<IdentityRole>>();
 
-// Configure custom Access Denied path
+// Configure cookie authentication paths to match the Identity Razor Pages routes
 builder.Services.ConfigureApplicationCookie(options =>
 {
+    options.LoginPath = "/Identity/Account/Login";
     options.AccessDeniedPath = "/Home/AccessDenied";
 });
 
@@ -40,30 +41,12 @@ builder.Services.AddSingleton<IEmailSender, EmailSender>();
 
 var app = builder.Build();
 
-// Seed Admin User and Role
+// Seed Admin User and Role (non-destructive: only creates if missing, never deletes)
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    await DbInitializer.SeedAdmin(services);    // Make sure DbInitializer uses RoleManager
-    await DbInitializer.SeedResumeSections(services); //  New seeding for resume sections
-    
-    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
-    var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
-
-    string[] roles = { "Admin", "User" };
-    foreach (var role in roles)
-    {
-        if (!await roleManager.RoleExistsAsync(role))
-            await roleManager.CreateAsync(new IdentityRole(role));
-    }
-
-    var adminEmail = "admin@yourdomain.com";
-    var adminUser = await userManager.FindByEmailAsync(adminEmail);
-
-    if (adminUser != null && !(await userManager.IsInRoleAsync(adminUser, "Admin")))
-    {
-        await userManager.AddToRoleAsync(adminUser, "Admin");
-    }
+    await DbInitializer.SeedAdmin(services);
+    await DbInitializer.SeedResumeSections(services);
 }
 
 
