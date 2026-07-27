@@ -45,8 +45,23 @@ dotnet run --project CodeFolio     # Run the app
 
 Configuration notes:
 - Root `.env` (gitignored) holds Docker Compose's Postgres credentials (`POSTGRES_DB`/`POSTGRES_USER`/`POSTGRES_PASSWORD`) — copy `.env.example` to get started.
-- `CodeFolio/appsettings.Development.json` (gitignored) holds the ASP.NET Core app's own config (`ConnectionStrings:DefaultConnection`, `Seed:AdminPassword`, `SendGrid:ApiKey`) — these are separate files serving separate consumers and must be kept in sync manually (same Postgres password in both).
+- `CodeFolio/appsettings.Development.json` (gitignored) holds the ASP.NET Core app's own config (`ConnectionStrings:DefaultConnection`, `Seed:AdminPassword`, `SendGrid:ApiKey`/`FromEmail`/`FromName`) — these are separate files serving separate consumers and must be kept in sync manually (same Postgres password in both).
 - The containerized PostgreSQL is exposed on host port **5433** (not 5432), to avoid colliding with any natively-installed local Postgres.
+
+## Production Configuration
+
+`CodeFolio/appsettings.Production.json` is tracked in git (unlike `appsettings.Development.json`) and contains **placeholders only** — a locked-down `AllowedHosts` value and placeholder keys for `ConnectionStrings`, `SendGrid`, and `Seed` documenting what must be supplied at deploy time. Real production secrets are never committed to `appsettings.json` or `appsettings.Production.json`.
+
+Instead, production secrets come from **environment variables**, supplied via the VPS's environment (systemd unit `Environment=` entries or an `EnvironmentFile=`, per the Phase 3 deployment plan in `ROADMAP.md`). ASP.NET Core's configuration system maps a nested JSON key to an environment variable by replacing each `:` with a double underscore `__`. For example:
+
+| JSON config key | Environment variable |
+|---|---|
+| `ConnectionStrings:DefaultConnection` | `ConnectionStrings__DefaultConnection` |
+| `SendGrid:ApiKey` | `SendGrid__ApiKey` |
+| `SendGrid:FromEmail` | `SendGrid__FromEmail` |
+| `Seed:AdminPassword` | `Seed__AdminPassword` |
+
+Environment variables override matching keys from `appsettings.json`/`appsettings.Production.json` at runtime, so the checked-in placeholder files can stay generic while each deployment target supplies its own real values out-of-band.
 
 ## Architecture
 
@@ -59,7 +74,7 @@ Standard ASP.NET Core MVC layout, all under `CodeFolio/`:
 - **`Controllers/`** — one controller per entity (`ProjectController`, `BlogPostController`, `ResumeController`, `ContactController`) plus `HomeController`. Pattern is consistent across CRUD controllers: `Index`/read actions are `[AllowAnonymous]`, write actions (`Create`/`Edit`/`Delete`) are `[Authorize(Roles = "Admin")]`. `ContactController` also sends an email via `IEmailSender` on submission.
 - **`Services/`**
   - `AppClaimPrincipalFactory` — adds `FirstName` and role claims to the user's `ClaimsPrincipal` on sign-in.
-  - `EmailSender` — SendGrid-backed `IEmailSender` implementation; reads the API key from `SendGrid:ApiKey` config and throws at construction if it's missing.
+  - `EmailSender` — SendGrid-backed `IEmailSender` implementation; reads the API key and sender identity from `SendGrid:ApiKey`/`FromEmail`/`FromName` config. Degrades gracefully if the key is missing or a send fails (logs a warning and returns) rather than throwing — email failures never break the calling request.
 - **`Areas/Identity/Pages/`** — scaffolded ASP.NET Core Identity Razor Pages (login, register, 2FA, account management, etc.) — standard scaffolded output, not hand-rolled.
 - **`Views/`** — Razor views grouped by controller (`Views/Project`, `Views/BlogPost`, `Views/Contact`, `Views/Home`), plus `Views/Shared/_Layout.cshtml` for the site chrome.
 
@@ -74,4 +89,4 @@ Anonymous requests to `[Authorize]`-protected pages previously redirected to `/A
 ### Known issues (not yet fixed)
 
 - A duplicate, incorrectly-pathed `<script>` tag in `Views/Shared/_Layout.cshtml` (`~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js`, missing the `/dist/` segment) 404s on every page load. The correctly-pathed copy is loaded separately via `_ValidationScriptsPartial` on pages that need client-side validation (forms), so validation still functions — this is a harmless but noisy console error on every page. Found during Phase 1.5 browser QA; not yet fixed.
-- `EmailSender` logs a warning and continues (does not crash the request) when SendGrid rejects a send (e.g. invalid/placeholder API key) — confirmed via the Contact form: the message still saves to `ContactMessages` and the user still reaches the Thank You page even though the email itself fails. Making this explicit and graceful by design is tracked as Phase 2, Task 4.
+- `EmailSender` logs a warning and continues (does not crash the request) when SendGrid rejects a send (e.g. invalid/placeholder API key) or when `SendGrid:ApiKey` is missing entirely — confirmed via the Contact form: the message still saves to `ContactMessages` and the user still reaches the Thank You page even though the email itself fails. Resolved in Phase 2, Task 4.
