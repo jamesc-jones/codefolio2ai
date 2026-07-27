@@ -51,6 +51,8 @@ try
     // Inject our SendGrid email sender
     builder.Services.AddSingleton<IEmailSender, EmailSender>();
 
+    builder.Services.AddHealthChecks();
+
     var app = builder.Build();
 
     // Seed Admin User and Role (non-destructive: only creates if missing, never deletes)
@@ -78,6 +80,7 @@ try
     app.UseAuthorization();
     app.MapRazorPages();
     app.MapStaticAssets();
+    app.MapHealthChecks("/health");
 
     app.MapControllerRoute(
             name: "default",
