@@ -2,7 +2,6 @@
 using SendGrid;
 using SendGrid.Helpers.Mail;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
 
 namespace CodeFolio.Services;
 

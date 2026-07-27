@@ -3,8 +3,6 @@ using CodeFolio.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
-using SendGrid;
-using SendGrid.Helpers.Mail;
 
 namespace CodeFolio.Controllers;
 
