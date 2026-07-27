@@ -4,7 +4,9 @@ using CodeFolio.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.RateLimiting;
 using Serilog;
+using System.Threading.RateLimiting;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -53,6 +55,18 @@ try
 
     builder.Services.AddHealthChecks();
 
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.AddFixedWindowLimiter("contact-form", limiterOptions =>
+        {
+            limiterOptions.PermitLimit = 5;
+            limiterOptions.Window = TimeSpan.FromMinutes(1);
+            limiterOptions.QueueLimit = 0;
+        });
+
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    });
+
     var app = builder.Build();
 
     // Seed Admin User and Role (non-destructive: only creates if missing, never deletes)
@@ -76,6 +90,7 @@ try
     app.UseHttpsRedirection();
     app.UseStaticFiles();           // Serve CSS/JS/img etc.
     app.UseRouting();
+    app.UseRateLimiter();
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapRazorPages();

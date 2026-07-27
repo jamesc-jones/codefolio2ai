@@ -3,6 +3,7 @@ using CodeFolio.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace CodeFolio.Controllers;
 
@@ -29,6 +30,7 @@ public class ContactController : Controller
     [HttpPost]
     [AllowAnonymous]
     [ValidateAntiForgeryToken]
+    [EnableRateLimiting("contact-form")]
     public async Task<IActionResult> Index(
         [Bind("ContactName", "ContactEmail", "ConMessage", "ContactPhone")] ContactMessage contactMessage)
     {
