@@ -1,0 +1,53 @@
+﻿@model CodeFolio.Models.BlogPost
+
+<!-- Banner Section -->
+<div class="hero-banner text-center text-white">
+    <img src="~/img/bernd-dittrich-PSB6bGW-r7k-unsplash.jpg"
+         alt="Monitor setup"
+         class="hero-image" asp-append-version="true" />
+
+    <!-- Text Overlay -->
+    <div class="hero-text">
+        <h1 class="display-3 fw-bold">Edit Blog Post</h1>
+    </div>
+</div>
+
+<!-- Photographer Credit -->
+<div class="text-end small mt-2 me-3">
+    Photo by <a href="https://unsplash.com/@@radowanrehan" target="_blank">Radowan Nakif Rehan</a> on
+    <a href="https://unsplash.com/photos/black-flat-screen-computer-monitor-cYyqhdbJ9TI" target="_blank">Unsplash</a>
+</div>
+
+
+<div class="container mt-5 pt-5">
+    <hr style="border-top: 4px solid #708090;" />
+    @{
+        ViewBag.Title = "Edit Blog Post";
+        Layout = "_Layout";
+    }
+    <h1 class="text-center">@ViewData["Title"]</h1>
+    <hr style="border-top: 4px solid #708090;" />
+    
+
+<h1>Edit Blog Post</h1>
+
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="BlogPostId" />
+    
+    <div class="form-group">
+        <label asp-for="BlogTitle" class="control-label">Blog Title</label>
+        <input asp-for="BlogTitle" class="form-control"/>
+        <span asp-validation-for="BlogTitle" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="BlogContent" class="control-label">Blog Content</label>
+        <textarea asp-for="BlogContent" id="BlogContent" class="form-control"></textarea>
+        <span asp-validation-for="BlogContent" class="text-danger"></span>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+
+</form>
+
+</div>

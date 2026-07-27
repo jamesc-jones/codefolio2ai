@@ -1,0 +1,48 @@
+﻿@page
+@model LogoutModel
+
+<!-- Banner Section -->
+<div class="hero-banner text-center text-white">
+    <img src="~/img/bernd-dittrich-PSB6bGW-r7k-unsplash.jpg"
+         alt="Monitor setup"
+         class="hero-image" asp-append-version="true" />
+
+    <!-- Text Overlay -->
+    <div class="hero-text">
+        <h1 class="display-3 fw-bold">Logout</h1>
+    </div>
+</div>
+
+<!-- Photographer Credit -->
+<div class="text-end small mt-2 me-3">
+    Photo by <a href="https://unsplash.com/@@radowanrehan" target="_blank">Radowan Nakif Rehan</a> on
+    <a href="https://unsplash.com/photos/black-flat-screen-computer-monitor-cYyqhdbJ9TI" target="_blank">Unsplash</a>
+</div>
+
+<div class="container mt-4 pt-4">
+    <hr style="border-top: 4px solid #708090;" />
+    @{
+        ViewData["Title"] = "Log out";
+    }
+    <h1 class="text-center">@ViewData["Title"]</h1>
+    <hr style="border-top: 4px solid #708090;" />
+    
+    
+    <div class="d-flex justify-content-center align-items-center flex-column" style="min-height: 40vh;">
+        <header class="text-center">
+            @{
+                if (User.Identity?.IsAuthenticated ?? false)
+                {
+                    <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/", new { area = "" })" method="post">
+                        <button type="submit" class="nav-link btn btn-link text-dark">Click here to Logout</button>
+                    </form>
+                }
+                else
+                {
+                    <p>You have successfully logged out of the application.</p>
+                }
+            }
+        </header>
+
+    </div>
+</div>    

@@ -1,0 +1,49 @@
+﻿@page
+@model ErrorModel
+
+<!-- Banner Section -->
+<div class="hero-banner text-center text-white">
+    <img src="~/img/bernd-dittrich-PSB6bGW-r7k-unsplash.jpg"
+         alt="Monitor setup"
+         class="hero-image" asp-append-version="true" />
+
+    <!-- Text Overlay -->
+    <div class="hero-text">
+        <h1 class="display-3 fw-bold">Error</h1>
+    </div>
+</div>
+
+<!-- Photographer Credit -->
+<div class="text-end small mt-2 me-3">
+    Photo by <a href="https://unsplash.com/@@radowanrehan" target="_blank">Radowan Nakif Rehan</a> on
+    <a href="https://unsplash.com/photos/black-flat-screen-computer-monitor-cYyqhdbJ9TI" target="_blank">Unsplash</a>
+</div>
+
+<div class="container mt-4 pt-4">
+    <hr style="border-top: 4px solid #708090;" />
+    @{
+        ViewData["Title"] = "Error";
+    }
+    <h1 class="text-center">@ViewData["Title"]</h1>
+    <hr style="border-top: 4px solid #708090;" />
+    
+
+<h1 class="text-danger">Error.</h1>
+<h2 class="text-danger">An error occurred while processing your request.</h2>
+
+@if (Model.ShowRequestId)
+{
+    <p>
+        <strong>Request ID:</strong> <code>@Model.RequestId</code>
+    </p>
+}
+
+<h3>Development Mode</h3>
+<p>
+    Swapping to <strong>Development</strong> environment will display more detailed information about the error that occurred.
+</p>
+<p>
+    <strong>Development environment should not be enabled in deployed applications</strong>, as it can result in sensitive information from exceptions being displayed to end users. For local debugging, development environment can be enabled by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>, and restarting the application.
+</p>
+
+</div>

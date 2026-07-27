@@ -1,0 +1,80 @@
+﻿@model CodeFolio.Models.ContactMessage
+
+@{
+    ViewBag.Title = "Contact Me";
+    Layout = "_Layout";
+}
+
+<!-- Banner Section -->
+<div class="hero-banner text-center text-white">
+    <img src="~/img/bernd-dittrich-PSB6bGW-r7k-unsplash.jpg"
+         alt="Monitor setup"
+         class="hero-image" asp-append-version="true" />
+
+    <!-- Text Overlay -->
+    <div class="hero-text">
+        <h1 class="display-3 fw-bold">Let's Get In Touch</h1>
+        <p class="lead">Please fill out the form below to contact me</p> 
+    </div>
+</div>
+
+<!-- Photographer Credit -->
+<div class="text-end small mt-2 me-3">
+    Photo by <a href="https://unsplash.com/@@radowanrehan" target="_blank">Radowan Nakif Rehan</a> on
+    <a href="https://unsplash.com/photos/black-flat-screen-computer-monitor-cYyqhdbJ9TI" target="_blank">Unsplash</a>
+</div>
+
+
+<div class="container mt-3 pt-3">
+    
+<div class="d-flex justify-content-center align-items-center mt-3 pt-3" style="min-height: 50vh;">
+<div class="col-md-6">
+    <section>
+        <form asp-action="Index" method="post">
+            @Html.AntiForgeryToken()
+
+            <!-- Display validation summary for model-level errors -->
+            <div asp-validation-summary="All" class="text-danger"></div>
+
+            <!-- Static intro text -->
+            <div class="mb-4 text-center">
+                <h2>Contact Me</h2>
+                <p>Please fill in your information below and I will be in touch soon.</p>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="ContactName" class="control-label mb-2"></label>
+                <input asp-for="ContactName" class="form-control"/>
+                <span asp-validation-for="ContactName" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mt-2 pt-2">
+                <label asp-for="ContactEmail" class="control-label mb-2"></label>
+                <input asp-for="ContactEmail" class="form-control"/>
+                <span asp-validation-for="ContactEmail" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mt-2 pt-2">
+                <label asp-for="ContactPhone" class="control-label mb-2"></label>
+                <input asp-for="ContactPhone" class="form-control" />
+                <span asp-validation-for="ContactPhone" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mt-2 pt-2">
+                <label asp-for="ConMessage" class="control-label mb-2"></label>
+                <textarea asp-for="ConMessage" class="form-control"></textarea>
+                <span asp-validation-for="ConMessage" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3 mb-2 pt-2">Send Message</button>
+        </form>
+    </section>
+    </div>
+  </div>
+</div>
+
+    @section Scripts {
+        <!-- Enables client-side validation -->
+        <partial name="_ValidationScriptsPartial"/>
+    }
+    

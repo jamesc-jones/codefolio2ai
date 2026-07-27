@@ -1,0 +1,103 @@
+﻿@model IEnumerable<CodeFolio.Models.ResumeSection>
+
+<!-- Banner Section -->
+<div class="hero-banner text-center text-white">
+    <img src="~/img/bernd-dittrich-PSB6bGW-r7k-unsplash.jpg"
+         alt="Monitor setup"
+         class="hero-image" asp-append-version="true" />
+
+    <!-- Text Overlay -->
+    <div class="hero-text">
+        <h1 class="display-3 fw-bold">Resume</h1>
+    </div>
+</div>
+
+<!-- Photographer Credit -->
+<div class="text-end small mt-2 me-3">
+    Photo by <a href="https://unsplash.com/@@radowanrehan" target="_blank">Radowan Nakif Rehan</a> on
+    <a href="https://unsplash.com/photos/black-flat-screen-computer-monitor-cYyqhdbJ9TI" target="_blank">Unsplash</a>
+</div>
+
+<div class="container mt-4 pt-4">
+    <!-- /Views/Resume/Index.cshtml -->
+    @{
+        ViewBag.Title = "My Resume";
+        Layout = "_Layout";
+    }
+
+    <div class="container mt-3 pt-2">
+        <hr style="border-top: 4px solid #708090;" />
+        <h1 id="resume" class="text-center">Resume</h1>
+        <hr style="border-top: 4px solid #708090;" />
+
+        <div class="row mt-4">
+
+            <!-- Highlight of Skills Section -->
+            <div class="col-md-12 mb-4">
+                <p id="highlight" class="text-center fw-bold fs-5 ms-3 mb-4">Highlight of Skills</p>
+
+                <p class="fw-bold fs-5 ms-3 mb-4">Computer Programming Skills</p>
+                <ul>
+                    <li>Proficiency in Object-Oriented Programming (Java, C#)</li>
+                    <li>Web Development Fundamentals (ASP.NET, HTML, CSS, JavaScript)</li>
+                    <li>Relational Databases & SQL (Schema Design, Query Optimization)</li>
+                    <li>Full-Stack Development Experience</li>
+                    <li>Understanding of Software Development Life Cycle (SDLC), Agile methodologies (Scrum), and Waterfall model</li>
+                </ul>
+            </div>
+
+            <!-- Core Competency Skills -->
+            <div class="col-md-12 mb-4">
+                <p class="fw-bold fs-5 ms-3 mb-4">Core Competency Skills</p>
+                <ul>
+                    <li>Clear and Effective Communication</li>
+                    <li>Strong Interpersonal Skills</li>
+                    <li>Proactive Work Ethic</li>
+                    <li>Team Collaboration across the SDLC, including Agile methodologies (Scrum) and traditional models like Waterfall</li>
+                </ul>
+            </div>
+
+            <!-- Educational Experience -->
+            <div class="col-md-12 mb-4">
+                <p class="text-center fw-bold fs-5 ms-3 mb-4">Educational Experience</p>
+                <p class="ms-3">
+                    <strong>Computer Programming and Analysis</strong> | Sept. 2023 – Apr. 2025<br />
+                    George Brown College, Toronto
+                </p>
+                <ul>
+                    <li>Full-stack development, web applications, and mobile app development experience</li>
+                    <li>Developed proficiency in software development methodologies and best practices</li>
+                    <li>Studied database management and optimization techniques</li>
+                </ul>
+            </div>
+
+            <!-- Work History -->
+            <div class="col-md-12 mb-4">
+                <p class="text-center fw-bold fs-5 ms-3 mb-4">Work History</p>
+                <p class="ms-3">
+                    <strong>Fitness Coach/Owner</strong> | Nov. 2020 – Present<br />
+                    JJ’s Fitness Toronto
+                </p>
+                <ul>
+                    <li>Develop and implement structured training programs</li>
+                    <li>Analyze client progress and adjust plans</li>
+                    <li>Manage business operations, budgeting, and marketing</li>
+                </ul>
+            </div>
+
+            <!-- Special Projects -->
+            <div class="col-md-12 mb-4">
+                <p class="text-center fw-bold fs-5 ms-3 mb-4">Special Projects</p>
+                <p class="ms-3">
+                    <strong>Project Management Tool – Web Application Development</strong> | Jan. 2025
+                </p>
+                <ul>
+                    <li>Developed dynamic web application featuring front-end UI/UX design, back-end logic, and database integration</li>
+                    <li>Integrated PostgreSQL database management for storing and retrieving data efficiently</li>
+                    <li>Focused on scalability and maintainability, applying best coding practices to optimize performance</li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+</div>

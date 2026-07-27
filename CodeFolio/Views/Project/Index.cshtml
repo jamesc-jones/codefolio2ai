@@ -1,0 +1,100 @@
+﻿@model IEnumerable<CodeFolio.Models.Project>
+
+<!-- Banner Section -->
+<div class="hero-banner text-center text-white">
+    <img src="~/img/bernd-dittrich-PSB6bGW-r7k-unsplash.jpg"
+         alt="Monitor setup"
+         class="hero-image" asp-append-version="true" />
+    <!-- Text Overlay -->
+    <div class="hero-text">
+        <h1 class="display-3 fw-bold">My Projects</h1>
+    </div>
+</div>
+
+<!-- Photographer Credit -->
+<div class="text-end small mt-2 me-3">
+    Photo by <a href="https://unsplash.com/@@radowanrehan" target="_blank">Radowan Nakif Rehan</a> on
+    <a href="https://unsplash.com/photos/black-flat-screen-computer-monitor-cYyqhdbJ9TI" target="_blank">Unsplash</a>
+</div>
+
+<div class="container-fluid mt-4 pt-4">
+    <hr style="border-top: 4px solid #708090;" />
+    <h1 class="text-center">My Projects</h1>
+    <hr style="border-top: 4px solid #708090;" />
+
+    <div class="row mt-4">
+        @* <div class="row mt-4 justify-content-center"> *@
+        @foreach (var project in Model)
+        {
+            <div class="col-md-12 mb-4">
+                <p class="fw-bold fs-5 ms-3">@project.ProjectTitle</p>
+
+            @*   
+                @if (!string.IsNullOrEmpty(project.ImageUrl))
+                {
+                    <img src="@project.ImageUrl" class="img-fluid mb-1 ms-3" alt="@project.ProjectTitle" />
+                }
+            *@
+            
+                <p class="ms-3"><strong>Date:</strong> @project.ProjectDate.ToLocalTime().ToString("MMMM yyyy")</p>
+                <p class="ms-3"><strong>Course:</strong> @project.ProjectCourse</p>
+                <p class="ms-3"><strong>Technologies:</strong> @project.ProjectTechnologies</p>
+                <p class="ms-3"><strong>Description:</strong> @project.ProjectDescription</p>
+                <p class="ms-3"><strong>Contribution / Learning Outcome:</strong> @project.ProjectContribution</p>
+                <div class="ms-3">
+                    <strong>View Project Tutorial:</strong><br />
+                    <a href="@project.YouTubeLink" target="_blank" class="btn btn-outline-dark btn-sm mt-3">
+                        <i class="fa-brands fa-youtube"></i> View YouTube Video
+                    </a>
+                </div>
+
+                @if (User.IsInRole("Admin"))
+                {
+                    <div class="ms-3 mt-3 mb-2">
+                        <a href="@Url.Action("Edit", "Project", new { id = project.ProjectId })" class="btn btn-secondary btn-sm">Edit</a>
+                        <a href="@Url.Action("Delete", "Project", new { id = project.ProjectId })" class="btn btn-danger btn-sm">Delete</a>
+                    </div>
+                }
+
+                <hr />
+
+                <!-- Buffer image between projects -->
+                <div class="carousel slide my-4" data-bs-ride="carousel">
+                    <div class="carousel-inner">
+                        <div class="carousel-item active">
+                            <img src="~/img/memento-media-SuDN17Hzudc-unsplash.jpg" class="d-block w-100" alt="Image 1" style="max-height: 450px; object-fit: cover;">
+                            <div class="text-end small mt-2 me-3">
+                                Photo by <a href="https://unsplash.com/@@heymemento?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Memento Media</a> on 
+                                <a href="https://unsplash.com/photos/group-of-people-sitting-on-chair-in-front-of-brown-wooden-table-SuDN17Hzudc?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Unsplash</a>
+                            </div>
+                                </div>
+                        <div class="carousel-item">
+                            <img src="~/img/rineshkumar-ghirao-UdDjFekHQuk-unsplash.jpg" class="d-block w-100" alt="Image 2" style="max-height: 450px; object-fit: cover;">
+                            <div class="text-end small mt-2 me-3">
+                                Photo by <a href="https://unsplash.com/@@throwingjungle?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Rineshkumar Ghirao</a> on 
+                                <a href="https://unsplash.com/photos/person-wearing-silver-ring-and-white-long-sleeve-shirt-UdDjFekHQuk?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Unsplash</a>
+                            </div>
+                        </div>
+                        <div class="carousel-item">
+                            <img src="~/img/wai-yan-moe-cWbSpwvLlaM-unsplash.jpg" class="d-block w-100" alt="Image 3" style="max-height: 450px; object-fit: cover;">
+                            <div class="text-end small mt-2 me-3">
+                                Photo by <a href="https://unsplash.com/@@wy_m?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Wai Yan Moe</a> on 
+                                <a href="https://unsplash.com/photos/black-laptop-computer-turned-on-beside-black-computer-keyboard-cWbSpwvLlaM?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Unsplash</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        
+
+        @if (User.IsInRole("Admin"))
+        {
+            <div class="text-center mt-1 mb-5">
+                <a href="@Url.Action("Create", "Project")" class="btn btn-primary btn-lg">Add New Project</a>
+            </div>
+        }
+
+</div>
+</div> <!-- This closes the <div class="row mt-4"> -->
+

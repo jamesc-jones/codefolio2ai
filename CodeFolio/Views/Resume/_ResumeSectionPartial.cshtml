@@ -1,0 +1,18 @@
+﻿@model CodeFolio.Models.ResumeSection
+
+<div class="col-12 mb-4">
+    <div class="card h-100 shadow-sm border-0">
+        <div class="card-body">
+            <h5 class="card-title @(Model.ResumeTitle == "Highlight of Skills" 
+                                    || Model.ResumeTitle == "Special Projects" 
+                                    || Model.ResumeTitle == "Educational Experience"
+                                    || Model.ResumeTitle == "Work History"
+                                    || Model.ResumeTitle == "Special Projects"    
+                                      ? "text-center" : "")">
+                @Model.ResumeTitle
+            </h5>
+            <div class="card-text">@Html.Raw(Model.ResumeContent)</div>
+        </div>
+    </div>
+</div>
+<hr>

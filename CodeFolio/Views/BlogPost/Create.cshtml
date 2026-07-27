@@ -1,0 +1,56 @@
+﻿@model CodeFolio.Models.BlogPost
+
+<!-- Banner Section -->
+<div class="hero-banner text-center text-white">
+    <img src="~/img/bernd-dittrich-PSB6bGW-r7k-unsplash.jpg"
+         alt="Monitor setup"
+         class="hero-image" asp-append-version="true" />
+
+    <!-- Text Overlay -->
+    <div class="hero-text">
+        <h1 class="display-3 fw-bold">Create New Blog Post</h1>
+    </div>
+</div>
+
+<!-- Photographer Credit -->
+<div class="text-end small mt-2 me-3">
+    Photo by <a href="https://unsplash.com/@@radowanrehan" target="_blank">Radowan Nakif Rehan</a> on
+    <a href="https://unsplash.com/photos/black-flat-screen-computer-monitor-cYyqhdbJ9TI" target="_blank">Unsplash</a>
+</div>
+
+<div class="container mt-4 mb-4 pt-4 pb-4">
+    <hr style="border-top: 4px solid #708090;" />
+    @{
+        ViewBag.Title = "Create New Blog Post";
+        Layout = "_Layout";
+    }
+    <h1 class="text-center">@ViewData["Title"]</h1>
+    <hr style="border-top: 4px solid #708090;" />
+
+
+    
+        
+            <h2 class="text-center mt-4 mb-3 pt-4">Enter your new post below</h2>
+
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <form method="post" class="col-md-6">
+                <div class="mb-3">
+                    <label asp-for="BlogTitle" class="form-label">Title</label>
+                    <input asp-for="BlogTitle" class="form-control" required />
+                </div>
+                <div class="mb-3">
+                    <label asp-for="BlogContent" class="form-label">Content</label>
+                    <textarea asp-for="BlogContent" class="form-control" required></textarea>
+                </div>
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary btn-lg mt-3 mb-3 ">Submit New Blog Post</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+</div>
+    
+

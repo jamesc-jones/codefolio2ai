@@ -1,0 +1,72 @@
+﻿@model CodeFolio.Models.Project
+
+<!-- Banner Section -->
+<div class="hero-banner text-center text-white">
+    <img src="~/img/bernd-dittrich-PSB6bGW-r7k-unsplash.jpg"
+         alt="Monitor setup"
+         class="hero-image" asp-append-version="true" />
+    <div class="hero-text">
+        <h1 class="display-3 fw-bold">Edit Project</h1>
+    </div>
+</div>
+
+<!-- Photographer Credit -->
+<div class="text-end small mt-2 me-3">
+    Photo by <a href="https://unsplash.com/@@radowanrehan" target="_blank">Radowan Nakif Rehan</a> on
+    <a href="https://unsplash.com/photos/black-flat-screen-computer-monitor-cYyqhdbJ9TI" target="_blank">Unsplash</a>
+</div>
+
+<div class="container mt-4 pt-4">
+    <hr style="border-top: 4px solid #708090;" />
+    <h1 class="text-center">Edit Project</h1>
+    <hr style="border-top: 4px solid #708090;" />
+    
+    <form method="post">
+        <input type="hidden" asp-for="ProjectId" />
+        <div class="form-group">
+            <label asp-for="ProjectTitle"></label>
+            <input asp-for="ProjectTitle" class="form-control" />
+            <span asp-validation-for="ProjectTitle" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="ProjectDate"></label>
+            <input asp-for="ProjectDate" class="form-control" type="date" />
+            <span asp-validation-for="ProjectDate" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="ProjectCourse" class="control-label"></label>
+            <input asp-for="ProjectCourse" class="form-control" />
+            <span asp-validation-for="ProjectCourse" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="ProjectTechnologies"></label>
+            <input asp-for="ProjectTechnologies" class="form-control" />
+            <span asp-validation-for="ProjectTechnologies" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="ProjectDescription"></label>
+            <textarea asp-for="ProjectDescription" class="form-control"></textarea>
+            <span asp-validation-for="ProjectDescription" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="ProjectContribution"></label>
+            <textarea asp-for="ProjectContribution" class="form-control"></textarea>
+            <span asp-validation-for="ProjectContribution" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="YouTubeLink"></label>
+            <input asp-for="YouTubeLink" class="form-control" />
+            <span asp-validation-for="YouTubeLink" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="ImageUrl"></label>
+            <input asp-for="ImageUrl" class="form-control" />
+            <span asp-validation-for="ImageUrl" class="text-danger"></span>
+        </div>
+        <button type="submit" class="btn btn-primary mt-2">Save Changes</button>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

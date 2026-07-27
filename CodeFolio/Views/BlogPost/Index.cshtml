@@ -1,0 +1,66 @@
+﻿@model IEnumerable<CodeFolio.Models.BlogPost>
+
+<!-- Banner Section -->
+<div class="hero-banner text-center text-white">
+    <img src="~/img/bernd-dittrich-PSB6bGW-r7k-unsplash.jpg"
+         alt="Monitor setup"
+         class="hero-image" asp-append-version="true" />
+
+    <!-- Text Overlay -->
+    <div class="hero-text">
+        <h1 class="display-3 fw-bold">Blog Posts</h1>
+    </div> 
+</div>
+
+<!-- Photographer Credit -->
+<div class="text-end small mt-2 me-3">
+    Photo by <a href="https://unsplash.com/@@radowanrehan" target="_blank">Radowan Nakif Rehan</a> on
+    <a href="https://unsplash.com/photos/black-flat-screen-computer-monitor-cYyqhdbJ9TI" target="_blank">Unsplash</a>
+</div>
+
+
+<div class="container mt-4 pt-4">
+
+    <hr style="border-top: 4px solid #708090;" />
+    @{
+        ViewBag.Title = "Blog Posts";
+        Layout = "_Layout";
+    }
+    <h1 class="text-center">@ViewData["Title"]</h1>
+    <hr style="border-top: 4px solid #708090;" />
+
+
+    <div class="row mt-4">
+        @foreach (var post in Model)
+        {
+            <div class="col-md-12 mb-4">
+                <div class="blog-post-card">
+                    <p class="fw-bold fs-5 ms-1">@post.BlogTitle</p>
+
+                    <p class="ms-1"><strong>Date:</strong> @post.PostedOn.ToLocalTime().ToString("f")</p>
+                    <p class="ms-1"><strong>Content:</strong> @post.BlogContent</p>
+
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <div class="ms-1 mt-3">
+                            <a href="@Url.Action("Edit", new { id = post.BlogPostId})" class="btn btn-secondary btn-sm">Edit</a>
+                            <a href="@Url.Action("Delete", new { id = post.BlogPostId})" class="btn btn-danger btn-sm">Delete</a>
+                        </div>
+                    }
+                </div>
+                @* <!-- Separator -->
+                <hr class="my-4" style="border-top: 3px solid #d3d3d3;" />
+                *@
+            </div>
+        }
+    </div>
+
+    @if (User.IsInRole("Admin"))
+    {
+        <div class="text-center mt-1 mb-5">
+            <a href="@Url.Action("Create")" class="btn btn-primary btn-lg">Create New Blog Post</a>
+        </div>
+    }
+
+</div>
+

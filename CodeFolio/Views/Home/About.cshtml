@@ -1,0 +1,49 @@
+﻿
+<!-- Banner Section -->
+<div class="hero-banner text-center text-white">
+    <img src="~/img/bernd-dittrich-PSB6bGW-r7k-unsplash.jpg"
+         alt="Monitor setup"
+         class="hero-image" asp-append-version="true" />
+
+    <!-- Text Overlay -->
+    <div class="hero-text">
+        <h1 class="display-3 fw-bold">About Me</h1>
+    </div>
+</div>
+
+<!-- Photographer Credit -->
+<div class="text-end small mt-2 me-3">
+    Photo by <a href="https://unsplash.com/@@radowanrehan" target="_blank">Radowan Nakif Rehan</a> on
+    <a href="https://unsplash.com/photos/black-flat-screen-computer-monitor-cYyqhdbJ9TI" target="_blank">Unsplash</a>
+</div>
+
+<div class="container mt-4 pt-4">
+    <hr style="border-top: 4px solid #708090;" />
+    @{
+        ViewData["Title"] = "About Me";
+    }
+    <h1 class="text-center">@ViewData["Title"]</h1>
+    <hr style="border-top: 4px solid #708090;" />
+
+    <div class="row align-items-center mt-4">
+        <!-- Left Column: Image -->
+        <div class="col-md-4 text-center">
+            <img src="~/img/James Headshot.jpg"
+                 alt="James Headshot"
+                 class="img-fluid rounded shadow-sm"
+                 style="max-width: 100%; height: auto;" asp-append-version="true" />
+        </div>
+
+        <!-- Right Column: About Text -->
+        <div class="col-md-8">
+            <p class="mt-4">
+                I have a <strong>strong foundation in object-oriented programming</strong> using <strong>Java and C#</strong>, combined with
+                <strong>full-stack development experience in HTML, CSS, JavaScript, and SQL,</strong> 
+                which has enabled the development of <strong>scalable and maintainable applications.</strong> Applying 
+                <strong>Agile methodologies such as Scrum</strong> and following <strong>software development life cycle 
+                (SDLC) best practices</strong> proved invaluable when working on a <strong>Project Management Tool,</strong> which 
+                <strong>enhanced database integration and backend logic skills using ASP.NET and PostgreSQL.</strong>
+            </p>
+        </div>
+    </div>
+</div>

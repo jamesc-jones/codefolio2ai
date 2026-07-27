@@ -1,0 +1,151 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<!-- Banner Section -->
+<div class="hero-banner text-center text-white">
+    <img src="~/img/bernd-dittrich-PSB6bGW-r7k-unsplash.jpg"
+         alt="Monitor setup"
+         class="hero-image" asp-append-version="true" />
+
+    <!-- Text Overlay -->
+    <div class="hero-text">
+        <h1 class="display-3 fw-bold">James Jones</h1>
+        <p class="lead">Software Developer</p>
+    </div>
+</div>
+
+<!-- Photographer Credit -->
+<div class="text-end small mt-2 me-3">
+    Photo by <a href="https://unsplash.com/@@radowanrehan" target="_blank">Radowan Nakif Rehan</a> on
+    <a href="https://unsplash.com/photos/black-flat-screen-computer-monitor-cYyqhdbJ9TI" target="_blank">Unsplash</a>
+</div>
+
+<!-- Navigation Menu -->
+<div class="container mt-5 d-flex align-items-start justify-content-center gap-xxl-5">
+    <!-- Menu heading on the left -->
+    <div>
+        <h4><strong>Menu</strong></h4>
+    </div>
+
+    <!-- Links on the right -->
+    <nav id="welcome" class="d-flex flex-column">
+        <a href="#welcome" class="text-dark text-decoration-underline mb-2">Welcome!</a>
+        <a href="#projects" class="text-dark text-decoration-underline mb-2">Academic Projects</a>
+        <a href="#more" class="text-dark text-decoration-underline mb-2">Want More?</a>
+        <a href="#goals" class="text-dark text-decoration-underline mb-2">Career Goals</a>
+        <a href="#achievements" class="text-dark text-decoration-underline mb-2">Notable Achievements</a>
+    </nav>
+</div>
+
+<!-- Welcome! Section -->
+<div class="container mt-5">
+    <hr style="border-top: 4px solid #708090;"/>
+    <h1 class="text-center">Welcome!</h1>
+    <hr style="border-top: 4px solid #708090;"/>
+    <p>
+        Welcome to my online portfolio! As a <strong>Computer Programming and Analysis student at George Brown College</strong>,
+        I am passionate about building <strong>scalable, maintainable software solutions</strong> using modern technologies.
+        My expertise spans
+        <strong>object-oriented programming (Java, C#), full-stack development (HTML, CSS, JavaScript, ASP.NET),
+            and database management (SQL, PostgreSQL).</strong>
+    </p>
+    <p>
+        This portfolio showcases my <strong>technical skills, projects, and career aspirations</strong> as I work toward becoming a
+        <strong>Web Developer (Frontend, Backend, or Full Stack) or Mobile App Developer (iOS/Android).</strong> I am always eager
+        to <strong>learn, collaborate, and solve complex problems,</strong> whether working independently or as part of a development team.
+    </p>
+    <p>
+        Feel free to explore my work, and don't hesitate to <strong>connect with me</strong> for potential opportunities,
+        collaborations, or discussions about technology!
+    </p>
+</div>
+
+<div id="projects" class="hero-banner text-center text-white">
+    <a asp-controller="Project" asp-action="Index">
+        <img src="~/img/alexander-nrjwolf-ysZnFnexwRE-unsplash.jpg"
+             alt="Nighttime office setup"
+             class="office-image" asp-append-version="true"/>
+    </a>
+</div>
+<!-- Photographer Credit -->
+<div class="text-end small mt-2 me-3">
+    Photo by <a href="https://unsplash.com/@@nrjwolf?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Alexander Nrjwolf</a> on
+    <a href="https://unsplash.com/photos/a-laptop-computer-sitting-on-top-of-a-desk-ysZnFnexwRE?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Unsplash</a>
+
+</div>
+
+<!-- Academic Projects Description -->
+<div id="more" class="text-center small mt-2">
+    <a asp-controller="Project" asp-action="Index"
+       class="fs-4 fw-bold text-decoration-none text-dark">
+        <h2 >Academic Projects</h2>
+    </a><br />
+    Please select the image above to see a sample of my past school projects.
+</div>
+
+<!-- GitHub Section with Image and Text Side-by-Side -->
+<div class="container mt-5 d-flex align-items-center justify-content-center gap-4 flex-wrap">
+    <a href="https://github.com/jamesc-jones/web-application-development" target="_blank">
+        <img src="~/img/GitHubLogo.PNG"
+             alt="GitHub Logo"
+             class="github-image-sm" asp-append-version="true" />
+    </a>
+    <div id="goals" class="text-muted text-start">
+        <h4><strong>Want More?</strong></h4>
+        <p class="mb-0">
+            Check out my GitHub by selecting the image or following this
+            <a href="https://github.com/jamesc-jones/web-application-development"
+               target="_blank"
+               class="text-dark text-decoration-underline fw-bold">
+                link
+            </a>
+        </p>
+    </div>
+</div>
+
+<!-- Career Goals Section -->
+<div class="container mt-5">
+    <hr style="border-top: 4px solid #708090;"/>
+    <h2 class="text-center">Career Goals</h2>
+    <hr style="border-top: 4px solid #708090;"/>
+
+    <p class="mt-4">
+        The goal is to establish a strong foundation as a <strong>Web Developer (Frontend, Backend, or Full Stack) or Mobile App Developer (iOS/Android)</strong> 
+        by securing a <strong>full-time role</strong> in the industry after graduating in <strong>Spring 2026.</strong> Gaining <strong>practical industry experience</strong> and refining expertise 
+        in <strong>scalable, maintainable software development</strong> will be key, with a focus on <strong>modern frameworks and cloud-based technologies.</strong>
+    </p>
+    <p class="mt-4">
+        By <strong>January 2028</strong>, the aim is to advance within an organization, whether through <strong>a promotion or progression into a higher-level role.</strong> 
+        Achieving this will require continuous learning, staying up to date with <strong>emerging technologies</strong>, and collaborating with <strong>industry 
+            professionals</strong> to strengthen <strong>technical skills and problem-solving abilities.</strong>
+    </p>
+    <p class="mt-4">
+        Long-term aspirations extend beyond <strong>2028</strong>, with a focus on <strong>leadership or specialized technical roles</strong>, such as <strong>Software Architect, 
+            Senior Software Engineer, or Development Team Lead.</strong> Contributing to <strong>large-scale, impactful projects</strong> remains a priority, along with 
+        designing <strong>efficient, high-performance applications</strong> that benefit businesses and end users. There is also a strong interest in <strong>mentorship 
+            and continuous learning</strong>, which may lead to opportunities in <strong>guiding junior developers, contributing to open-source projects, or 
+            exploring technical consulting.</strong>
+    </p>
+    <p class="mt-4">
+        Staying at the forefront of <strong>technology trends</strong>, deepening expertise in <strong>cloud computing, AI-driven development, and system scalability,</strong> 
+        and continuously refining <strong>problem-solving abilities</strong> will be essential to delivering <strong>high-quality software solutions</strong> and making 
+        meaningful contributions to the field.
+    </p>
+</div>
+
+<!-- Notable Achievements Section -->
+<div class="container mt-5">
+    <hr style="border-top: 4px solid #708090;"/>
+    <h2 id="achievements" class="text-center">Notable Achievements</h2>
+    <hr style="border-top: 4px solid #708090;"/>
+
+    <ul class="mt-4" style="list-style-type: disc; padding-left: 1.5rem;">
+        <li class="mb-2">
+            Achieved <strong>Dean’s List</strong> recognition for academic excellence on four separate occasions
+        </li>
+        <li>
+            Maintained a <strong>cumulative GPA of 3.67</strong> throughout the program
+        </li>
+    </ul>
+</div>
