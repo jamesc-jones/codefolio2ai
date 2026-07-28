@@ -110,24 +110,28 @@ Phase 2 (commit `0b1eb67`, tag `phase-2-production-hardening`) brought CodeFolio
 
 *Implemented structured logging, health monitoring, rate limiting, production configuration management, and release validation for an ASP.NET Core MVC portfolio platform — demonstrating experience in application reliability, operational observability, security-conscious configuration, and deployment readiness.*
 
-### Phase 3 — Production Deployment (planned, not yet executed)
+### Phase 3 — Production Deployment (Complete)
 
-> *This section will be updated to reflect completed work once Phase 3 is executed. The following documents the planned scope for portfolio reference.*
+> *This section documents production deployment work completed during Phase 3 for portfolio and interview reference.*
 
-Phase 3 deploys the hardened application to a DigitalOcean VPS using a full Docker Compose stack, demonstrating production infrastructure experience beyond application code:
+Phase 3 (deployed and verified 2026-07-28) took CodeFolio live at **https://codefolio2ai.com** on a DigitalOcean VPS using a full Docker Compose stack:
 
-**Containerization:** Multi-stage Dockerfile for ASP.NET Core 9 — SDK image for `dotnet publish -c Release`, minimal ASP.NET runtime image for the final artifact. Non-root process user, deterministic layer caching via `COPY *.csproj` before full source copy.
+**Containerization:** Multi-stage Dockerfile for ASP.NET Core 9 — SDK image for `dotnet publish -c Release`, minimal ASP.NET runtime image for the final artifact. Non-root process user, deterministic layer caching via `COPY *.csproj` before full source copy. A `.dockerignore` excludes `bin/`/`obj/`, preventing stale Windows-path NuGet artifacts from breaking the Linux container build.
 
-**Container Orchestration:** Three-service `docker-compose.production.yml` (Nginx + ASP.NET Core + PostgreSQL) on a private Docker bridge network. Postgres has no host port exposure — accessible only within the network. `depends_on: condition: service_healthy` ensures the app never starts before the database is ready.
+**Container Orchestration:** Three-service `docker-compose.production.yml` (Nginx + ASP.NET Core + PostgreSQL) on a private Docker bridge network (`codefolio-net`). Postgres has no host port exposure — accessible only within the network. `depends_on: condition: service_healthy` ensures the app never starts before the database is ready.
 
-**Reverse Proxy + TLS:** Nginx container handles TLS termination via Let's Encrypt / Certbot. Strong TLS settings (TLSv1.2+, ECDHE cipher suite), HTTP → HTTPS redirect, security response headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`). Automatic certificate renewal via cron hook that reloads Nginx without restarting the container.
+**Reverse Proxy + TLS:** Nginx terminates TLS using a real Let's Encrypt certificate (issued via Certbot standalone mode) covering `codefolio2ai.com`/`www.codefolio2ai.com`, valid through 2026-10-26. Strong TLS settings (TLSv1.2+, ECDHE cipher suite), HTTP → HTTPS redirect, and security response headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`) are all active in production. Automatic renewal is configured via cron + an Nginx reload hook; `certbot renew --dry-run` succeeded.
 
-**Server Hardening:** UFW firewall (ports 22/80/443 only), fail2ban SSH brute-force protection, non-root deploy user with SSH key auth, root SSH login disabled.
+**Server Hardening:** UFW firewall (ports 22/80/443 only), fail2ban SSH brute-force protection, non-root `deploy` user with SSH key auth, root SSH login disabled.
+
+**Database Migration:** EF Core's `InitialCreate` migration applied to production Postgres via a disposable SDK container joined to the app's Docker network. This surfaced a real packaging gap: a migration-only source bundle of just `Migrations/`/`Data/`/`Models/`/`.csproj` failed to compile, since `CodeFolio.csproj` is a single executable project (not a class library) — `Program.cs` and `Services/` (referenced directly by `Program.cs`) had to be included too.
 
 **Secrets Management:** All production secrets in a `chmod 600` `.env.production` file on the server — never in source control. ASP.NET Core's `__`-separator env var convention maps Docker Compose environment variable passthrough directly to the config system, eliminating a separate secrets store.
 
-**Operational Backup:** Daily `pg_dump` cron at 3 AM with 14-day local retention and optional DigitalOcean Spaces off-site copy. Restore procedure tested against a scratch database, not just assumed.
+**Production Verification:** A full smoke test passed in production — homepage, Projects/Blog pages, contact form submission and database persistence, authentication and authorization redirects, and the `/health` endpoint (returns `Healthy`) were all verified directly against the live site. Both a container restart and a full `down`/`up -d` recreation were tested, with all 12 database tables and seeded data confirmed intact afterward.
 
-**Deployment Workflow:** `docker build → docker save → scp → docker load → docker compose up -d --no-deps` with git-hash image tags for rollback traceability. Zero-downtime consideration documented (tradeoffs noted).
+**Known limitation:** SendGrid email delivery is currently blocked by the SendGrid account's own credit limit ("Maximum credits exceeded") — an external account-plan issue, not an application defect. Per Phase 2's `EmailSender` hardening, contact form submissions still validate and persist correctly regardless.
 
-*Full tutorial: `PHASE_3_DEPLOYMENT.md`.*
+**Remaining follow-up (not yet done):** the deployment update/rollback workflow hasn't been exercised yet (no code update has been redeployed since initial launch), and no PostgreSQL backup cron is configured.
+
+*Full tutorial and detailed task log: `PHASE_3_DEPLOYMENT.md`.*

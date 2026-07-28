@@ -1,6 +1,6 @@
 # CodeFolio — Project Development Roadmap
 
-> **Last Updated:** 2026-07-28 (Phase 3 architecture updated to full Docker Compose)  
+> **Last Updated:** 2026-07-28 (Phase 3 core deployment completed and verified live at https://codefolio2ai.com)  
 > **Stack:** ASP.NET Core 9 MVC · Razor Views · EF Core · PostgreSQL · ASP.NET Core Identity · SendGrid  
 > **Target:** DigitalOcean VPS · Docker Compose · Claude AI Assistant
 
@@ -134,7 +134,7 @@ Performed with real Playwright browser automation, closing out the one open cave
 
 **Objective:** Deploy to a production VPS with HTTPS, a reverse proxy, persistent database storage, and a clean deployment workflow.
 
-**Status: Not started. This is the current next milestone.**
+**Status: Core deployment complete (2026-07-28). Live at https://codefolio2ai.com. Tasks 1–13 verified; Tasks 14–15 remain as follow-up.**
 
 **Full tutorial:** `PHASE_3_DEPLOYMENT.md` at the solution root.
 
@@ -161,20 +161,20 @@ Orchestrated by: docker-compose.production.yml
 
 | # | Task | Notes |
 |---|------|-------|
-| 1 | 🔲 Add `UseForwardedHeaders` to `Program.cs` | Required so Kestrel sees real client IP from behind Nginx; uses `Microsoft.AspNetCore.HttpOverrides` (no new package) |
-| 2 | 🔲 Create `CodeFolio/Dockerfile` | Multi-stage build: SDK image for publish, ASP.NET runtime image for final; non-root user; EXPOSE 8080 |
-| 3 | 🔲 Create `nginx/codefolio.conf` | HTTP-only first; HTTPS `server` block added after cert issued in Task 12 |
-| 4 | 🔲 Create `docker-compose.production.yml` | nginx + codefolio-web + postgres; postgres has no host port; secrets from `.env.production` |
-| 5 | 🔲 Update `.gitignore` for `.env.production`; commit Dockerfile and compose files | `.env.production` must never be committed |
-| 6 | 🔲 Provision DigitalOcean Droplet | Ubuntu 24.04, $6–12/month, SSH key auth only |
-| 7 | 🔲 Initial server hardening | Non-root `deploy` user; disable root SSH; UFW (22/80/443); fail2ban |
-| 8 | 🔲 Install Docker + Docker Compose on Droplet | Docker Engine + Compose plugin via Docker's official apt repo |
-| 9 | 🔲 Configure DNS | A records for `@` and `www` pointing to Droplet IP; verify propagation |
-| 10 | 🔲 Deploy the application (HTTP first): build image, transfer to Droplet, create `.env.production`, start the stack | `docker save` + `scp`; copy `docker-compose.production.yml` + `nginx/codefolio.conf`; create `.env.production` on the server (chmod 600, never copied from local); `docker compose -f ... up -d`; verify `/health` |
-| 11 | 🔲 Apply EF Core migrations against production Postgres | Run migration via temporary SDK container on the `codefolio-net` Docker network |
-| 12 | 🔲 Issue TLS certificate via Certbot + update Nginx config for HTTPS | Stop Nginx briefly for standalone cert issuance; update conf with HTTPS server block + strong TLS settings + security headers; set up renewal cron hook |
-| 13 | 🔲 Full production smoke test | HTTPS cert validity, HTTP→HTTPS redirect, `/health`, auth, Project CRUD, contact form, rate limiting, security headers |
-| 14 | 🔲 Document and test deployment update workflow | `docker build` → `docker save/scp` → `docker load` → `docker compose up -d --no-deps codefolio-web`; rollback procedure |
+| 1 | ✅ Add `UseForwardedHeaders` to `Program.cs` | Required so Kestrel sees real client IP from behind Nginx; uses `Microsoft.AspNetCore.HttpOverrides` (no new package) |
+| 2 | ✅ Create `CodeFolio/Dockerfile` | Multi-stage build: SDK image for publish, ASP.NET runtime image for final; non-root user; EXPOSE 8080. Required adding `.dockerignore` (excluding `bin/`/`obj/`) after a local build failure caused by stale Windows-path NuGet artifacts |
+| 3 | ✅ Create `nginx/codefolio.conf` | HTTP-only first; HTTPS `server` block added after cert issued in Task 12 |
+| 4 | ✅ Create `docker-compose.production.yml` | nginx + codefolio-web + postgres; postgres has no host port; secrets from `.env.production` |
+| 5 | ✅ Update `.gitignore` for `.env.production`; commit Dockerfile and compose files | `.env.production` must never be committed |
+| 6 | ✅ Provision DigitalOcean Droplet | `codefolio2ai-prod`, Ubuntu 24.04 LTS, Toronto (TOR1), 1 vCPU/1GB RAM |
+| 7 | ✅ Initial server hardening | Non-root `deploy` user; root SSH disabled (verified `Permission denied`); UFW active (22/80/443); fail2ban installed and running |
+| 8 | ✅ Install Docker + Docker Compose on Droplet | Docker 29.6.2, Compose v5.3.1, verified via `docker run hello-world` |
+| 9 | ✅ Configure DNS | `codefolio2ai.com` and `www.codefolio2ai.com` both resolve to the Droplet IP; verified via `dig` |
+| 10 | ✅ Deploy the application (HTTP first): build image, transfer to Droplet, create `.env.production`, start the stack | `docker save` + `scp`; copied `docker-compose.production.yml` + `nginx/codefolio.conf`; `.env.production` created directly on the server (chmod 600); stack started; `/health` initially failed as expected (no schema yet) until Task 11 |
+| 11 | ✅ Apply EF Core migrations against production Postgres | Ran via temporary SDK container on `codefolio_codefolio-net`. First two attempts failed (missing NuGet restore, then missing `Program.cs`/`Services/` in the migration source bundle — `CodeFolio.csproj` is a single executable project, not a class library); corrected bundle applied `InitialCreate` successfully; admin user + 7 `ResumeSection` rows seeded |
+| 12 | ✅ Issue TLS certificate via Certbot + update Nginx config for HTTPS | Real Let's Encrypt cert issued for both domains (valid through 2026-10-26); HTTPS server block deployed with strong TLS settings + security headers; renewal cron configured; `certbot renew --dry-run` succeeded |
+| 13 | ✅ Full production smoke test | Homepage, Projects, Blog, Contact form (real submission + DB persistence verified), authentication + authorization redirects, `/health`, container restart persistence, and full `down`/`up -d` recreation (12 tables intact) — all verified directly against https://codefolio2ai.com |
+| 14 | 🔲 Document and test deployment update workflow | Not yet exercised — no code update has been redeployed since initial launch |
 | 15 | 🔲 Set up PostgreSQL backup | `pg_dump` cron (3 AM daily, 14-day retention); test restore procedure; optional: off-site to DigitalOcean Spaces |
 
 ---
@@ -240,17 +240,17 @@ No existing controllers, views, or services are modified. If the AI endpoint fai
 
 ## Current Status
 
-**Phases 1, 1.5, and 2 are complete. Phase 2 is tagged in git (`phase-2-production-hardening`); Phases 1 and 1.5 are identifiable by commit hash only.**
+**Phases 1, 1.5, 2, and the core of Phase 3 are complete. Phase 2 is tagged in git (`phase-2-production-hardening`); Phases 1 and 1.5 are identifiable by commit hash only. Phase 3 is not yet tagged pending Tasks 14–15.**
 
 | Phase | Git Reference | Status |
 |-------|---------|--------|
 | Phase 1 — Backend Stabilization | *(part of Phase 1.5 commit)* | ✅ Complete |
 | Phase 1.5 — Dev Environment Containerization | commit `b65e015` | ✅ Complete |
 | Phase 2 — Production Hardening | tag `phase-2-production-hardening` → commit `0b1eb67` | ✅ Complete |
-| Phase 3 — DigitalOcean VPS Deployment | — | 🔲 Next milestone |
-| Phase 4 — Claude AI Assistant Integration | — | 🔲 Pending Phase 3 |
+| Phase 3 — DigitalOcean VPS Deployment | — | ✅ Core deployment live (Tasks 1–13); Tasks 14–15 pending |
+| Phase 4 — Claude AI Assistant Integration | — | 🔲 Pending Phase 3 follow-up |
 
-Awaiting explicit approval before Phase 3 begins. Full deployment tutorial: `PHASE_3_DEPLOYMENT.md`.
+**CodeFolio is live in production at https://codefolio2ai.com.** Full production smoke test passed 2026-07-28 (see `PHASE_3_DEPLOYMENT.md` for the complete results table). Known limitation: SendGrid email delivery is currently blocked by the SendGrid account's own credit limit ("Maximum credits exceeded") — an external account issue, not an application defect; contact form validation and database persistence are unaffected. Remaining follow-up: deployment update/rollback workflow (Task 14) and PostgreSQL backup (Task 15) have not yet been implemented. Full deployment tutorial and detailed log: `PHASE_3_DEPLOYMENT.md`.
 
 Daily local dev workflow:
 

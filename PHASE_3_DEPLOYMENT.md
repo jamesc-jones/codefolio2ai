@@ -1,7 +1,7 @@
 # Phase 3 — DigitalOcean VPS Deployment Tutorial
 
-> **Status:** Not started — tutorial only. Do not execute until you are ready to deploy.  
-> **Created:** 2026-07-28  
+> **Status:** ✅ Executed and verified in production 2026-07-28. Tasks 1–13 complete; Tasks 14 (deployment update workflow) and 15 (PostgreSQL backup) remain as follow-up work. Live at https://codefolio2ai.com.
+> **Created:** 2026-07-28
 > **Prerequisites:** Phase 2 complete, git tag `phase-2-production-hardening` → commit `0b1eb67`
 
 ---
@@ -1080,4 +1080,47 @@ These items require decisions at implementation time:
 
 ---
 
-*This tutorial is documentation only. No files have been modified and no deployment has been executed. Begin execution only when all pre-deployment checklist items are confirmed.*
+## Phase 3 Production Deployment Completed (2026-07-28)
+
+Tasks 1–13 of this tutorial were executed and verified against the live production environment.
+
+**Production URL:** https://codefolio2ai.com
+
+**Deployment architecture:**
+- DigitalOcean Droplet `codefolio2ai-prod` — Ubuntu 24.04 LTS, Toronto (TOR1), 1 vCPU / 1 GB RAM
+- Three-container Docker Compose stack (`docker-compose.production.yml`): `codefolio_nginx`, `codefolio_web`, `codefolio_postgres_prod`, all on the private `codefolio_codefolio-net` bridge network
+- PostgreSQL 17 (`codefolio_postgres_prod`) — no host port exposed, data in the `codefolio_pgdata` named volume
+- Nginx reverse proxy terminating TLS, proxying to `codefolio-web:8080`
+
+**SSL/HTTPS:**
+- Let's Encrypt certificate issued for `codefolio2ai.com` and `www.codefolio2ai.com`
+- Valid 2026-07-28 through 2026-10-26 (standard 90-day Let's Encrypt lifecycle)
+- Automatic renewal configured via cron + Nginx reload hook; `certbot renew --dry-run` succeeded
+- HTTP → HTTPS redirect confirmed (`301 Moved Permanently`)
+
+**Database:**
+- Production database `CodeFolioDB`, user `codefolio_prod`
+- `InitialCreate` EF Core migration applied via a disposable SDK container on the app's Docker network. This required rebuilding the migration source bundle to include `Program.cs` and `Services/` — the original bundle (just `Migrations/`/`Data/`/`Models/`/`.csproj`) failed to compile because `CodeFolio.csproj` is a single executable project, not a class library, so the whole source tree needed to build as one unit.
+- Admin user and 7 `ResumeSection` rows seeded by `DbInitializer` on first successful start
+- Confirmed intact across both a container restart and a full `down`/`up -d` recreation
+
+**Production smoke test results (2026-07-28):**
+
+| Test | Result | Notes |
+|---|---|---|
+| Homepage | ✅ Pass | HTTPS, navbar, assets, footer all render; one pre-existing harmless console error (documented in `CLAUDE.md`) |
+| Projects page | ✅ Pass | Loads correctly; zero records is expected — `DbInitializer` doesn't seed sample Projects |
+| Blog page | ✅ Pass | Loads correctly; zero records is expected — `DbInitializer` doesn't seed sample BlogPosts |
+| Contact form | ✅ Pass | Client validation, submission, and `ContactMessages` persistence all verified with a real test submission |
+| Authentication | ✅ Pass | Login page loads, admin login succeeds, anonymous access to admin routes correctly redirects to login |
+| `/health` endpoint | ✅ Pass | Returns `Healthy` — this is an existing feature since Phase 2, not new |
+| Container restart persistence | ✅ Pass | Data intact after `docker compose restart` |
+| Full container recreation | ✅ Pass | Data intact after `down` / `up -d`; all 12 tables present |
+
+**Known limitations:**
+- SendGrid email delivery is currently rejected by the SendGrid account itself ("Maximum credits exceeded") — an external account-plan limitation, not an application defect. Per Phase 2's `EmailSender` hardening, contact form submissions still validate and persist to `ContactMessages` correctly regardless of email delivery status.
+- Tasks 14 (deployment update workflow) and 15 (PostgreSQL backup) have not been executed/tested yet — recommended as near-term follow-up before relying on this deployment long-term.
+- No sample Project/BlogPost content exists — expected, not a defect.
+- The pre-existing harmless `jquery-validation-unobtrusive` console 404 (documented in `CLAUDE.md`'s Known Issues) is present in production, same as in development.
+
+*Tutorial retained above as the reference procedure for future redeployments, updates, or a second environment.*
