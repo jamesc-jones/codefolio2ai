@@ -1,0 +1,68 @@
+# Production stack: Nginx + ASP.NET Core app + PostgreSQL
+# Usage: docker compose -f docker-compose.production.yml --env-file .env.production up -d
+
+services:
+
+  nginx:
+    image: nginx:alpine
+    container_name: codefolio_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/codefolio.conf:/etc/nginx/conf.d/codefolio.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - certbot-webroot:/var/www/certbot
+    depends_on:
+      - codefolio-web
+    networks:
+      - codefolio-net
+    restart: unless-stopped
+
+  codefolio-web:
+    image: codefolio:latest
+    container_name: codefolio_web
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      - SendGrid__ApiKey=${SENDGRID_API_KEY}
+      - SendGrid__FromEmail=${SENDGRID_FROM_EMAIL}
+      - SendGrid__FromName=${SENDGRID_FROM_NAME}
+      - Seed__AdminPassword=${SEED_ADMIN_PASSWORD}
+    volumes:
+      - app-logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - codefolio-net
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: codefolio_postgres_prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - codefolio-net
+    restart: unless-stopped
+    # No ports: block — postgres is not accessible from outside Docker network
+
+networks:
+  codefolio-net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  app-logs:
+  certbot-webroot:
