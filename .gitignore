@@ -8,6 +8,9 @@ bin/
 obj/
 publish-output/
 
+# Local deployment transfer artifacts (image exports, migration bundles)
+*.tar.gz
+
 # IDE
 .idea/
 .vscode/
