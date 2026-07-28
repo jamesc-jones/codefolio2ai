@@ -1,6 +1,6 @@
 # CodeFolio — Project Development Roadmap
 
-> **Last Updated:** 2026-07-27  
+> **Last Updated:** 2026-07-28 (Phase 3 architecture updated to full Docker Compose)  
 > **Stack:** ASP.NET Core 9 MVC · Razor Views · EF Core · PostgreSQL · ASP.NET Core Identity · SendGrid  
 > **Target:** DigitalOcean VPS · Docker Compose · Claude AI Assistant
 
@@ -109,25 +109,24 @@ Performed with real Playwright browser automation, closing out the one open cave
 
 ---
 
-## Phase 2 — Production Preparation
+## Phase 2 — Production Hardening
 
-**Objective:** Make the application behave correctly and observably in a production environment before it touches a server.
+**Objective:** Make the application observable, resilient, and deployment-ready before it touches a production server.
 
-**Status: Not started. Begins after Phase 1.5 is fully validated.**
+**Status: Complete (2026-07-28). Git tag: `phase-2-production-hardening` → commit `0b1eb67`.**
 
-### Tasks
+### Completed
 
 | # | Task | Notes |
 |---|------|-------|
-| 1 | 🔲 Add Serilog with rolling file sink | Replace default console-only logging; structured JSON output |
-| 2 | 🔲 Add `/health` endpoint | `app.MapHealthChecks("/health")` — used by Nginx and uptime monitoring |
-| 3 | 🔲 Add rate limiting to `ContactController` | ASP.NET Core built-in rate limiting; e.g. 5 submissions/minute per IP |
-| 4 | 🔲 Make `EmailSender` degrade gracefully if API key is missing | Currently throws at construction, crashing the app on startup; should log a warning and no-op instead |
-| 5 | 🔲 Lock `AllowedHosts` to production domain | Currently `"*"` in `appsettings.json` |
-| 6 | 🔲 Create `appsettings.Production.json` template | No real secrets — documents required environment variable names |
-| 7 | 🔲 Remove stale `using` in `EmailSender.cs` | `using Microsoft.VisualStudio.Web.CodeGenerators.Mvc...` — leftover from scaffolding, unused |
-| 8 | 🔲 Remove `Npgsql.EntityFrameworkCore.PostgreSQL.Design` v1.1.0 | Version from 2016; superseded by the main Npgsql provider; can cause tooling confusion |
-| 9 | 🔲 Publish production build and confirm output | `dotnet publish -c Release` — verify no dev-only assets in output |
+| 0 | ✅ Dependency and import cleanup | Removed `Npgsql.EntityFrameworkCore.PostgreSQL.Design` v1.1.0 (2016-era stale package); added `<PrivateAssets>all</PrivateAssets>` to `Microsoft.VisualStudio.Web.CodeGeneration.Design`; removed unused `using` directives from `EmailSender.cs` and `ContactController.cs`; `dotnet build` confirmed 0 errors, 0 warnings |
+| 1 | ✅ Structured logging via Serilog | `Serilog.AspNetCore` + `Serilog.Sinks.File` installed; `UseSerilog()` added to host with bootstrap logger pattern (catches startup-time failures); `appsettings.json` `Serilog` section configures console + rolling daily file sink, 14-day retention; `appsettings.Production.json` overrides minimum level to `Warning`; `logs/` added to `.gitignore` |
+| 2 | ✅ Health monitoring endpoint | `AddHealthChecks()` registered; `app.MapHealthChecks("/health")` mapped before Razor Pages and MVC routes; endpoint is anonymous (no auth required); verified `GET /health` returns HTTP 200 `Healthy` |
+| 3 | ✅ Contact form rate limiting | ASP.NET Core built-in rate limiting (no extra package); fixed-window limiter `"contact-form"` policy: 5 requests/minute per IP, queue limit 0, HTTP 429 rejection; `UseRateLimiter()` placed after `UseRouting()` and before `UseAuthentication()`; `[EnableRateLimiting("contact-form")]` applied only to the POST action of `ContactController`; 6th submission within window confirmed to return 429 |
+| 4 | ✅ EmailSender reliability hardening | Constructor no longer throws if `SendGrid:ApiKey` is null/missing — logs a `Warning` and marks email as disabled; `SendEmailAsync` returns early with a log warning when key is absent; `catch` block logs error and returns instead of rethrowing, so network-level send failures cannot crash the calling request; sender identity (`FromEmail`, `FromName`) moved from hardcoded values to `SendGrid:FromEmail`/`SendGrid:FromName` config keys |
+| 5 | ✅ Production configuration template | `CodeFolio/appsettings.Production.json` created and committed (safe — contains placeholder/empty values only); `AllowedHosts` set to production domain placeholder; `appsettings.*.json` gitignore exception added (`!appsettings.Production.json`) so the template is tracked; Production Serilog override included |
+| 6 | ✅ Environment variable and secrets documentation | `CLAUDE.md` updated with production secrets strategy and `__`-separator env var naming table; confirmed no real secrets in any tracked file via `git ls-files` audit |
+| 7 | ✅ Release build verification | `dotnet publish -c Release` succeeds cleanly; `appsettings.Development.json` confirmed absent from output; `appsettings.Production.json` confirmed present; `publish-output/` added to root `.gitignore`; browser regression test passed: authentication, Project CRUD, BlogPost CRUD, Contact form, `/health` endpoint all verified post-publish |
 
 ---
 
@@ -135,37 +134,48 @@ Performed with real Playwright browser automation, closing out the one open cave
 
 **Objective:** Deploy to a production VPS with HTTPS, a reverse proxy, persistent database storage, and a clean deployment workflow.
 
-**Status: Not started. Begins after Phase 2 is complete.**
+**Status: Not started. This is the current next milestone.**
+
+**Full tutorial:** `PHASE_3_DEPLOYMENT.md` at the solution root.
+
+### Architecture Decision
+
+The original plan had the ASP.NET Core app running natively via `systemd` + Kestrel. **Phase 3 uses full Docker Compose instead** — all three components (Nginx, the ASP.NET Core app, PostgreSQL) run as containers. See `PHASE_3_DEPLOYMENT.md` for rationale.
 
 ### Infrastructure Stack
 
 ```
 [Internet :443/:80]
       │
-   Nginx  (reverse proxy + TLS via Let's Encrypt / Certbot)
+   Nginx  (Docker container — TLS termination + reverse proxy)
       │
-   Kestrel  (ASP.NET Core, managed by systemd)
+   codefolio-web  (Docker container — ASP.NET Core 9 / Kestrel, port 8080 internal)
       │
-   PostgreSQL  (Docker container on the same Droplet, named volume for persistence)
+   postgres  (Docker container — no host port exposed, named volume for persistence)
+
+All three containers on private bridge network: codefolio-net
+Orchestrated by: docker-compose.production.yml
 ```
 
 ### Tasks
 
 | # | Task | Notes |
 |---|------|-------|
-| 1 | 🔲 Provision DigitalOcean Droplet | Ubuntu 24.04, $6–12/month, SSH key auth only, non-root deploy user |
-| 2 | 🔲 Install .NET 9 runtime on Droplet | Runtime only, not SDK |
-| 3 | 🔲 Install Docker + Docker Compose on Droplet | For PostgreSQL container |
-| 4 | 🔲 Install Nginx on Droplet | Package manager install |
-| 5 | 🔲 Create production `docker-compose.yml` | PostgreSQL with named volume; no exposed port to host network |
-| 6 | 🔲 Run PostgreSQL container and apply migration | `dotnet ef database update` with production connection string |
-| 7 | 🔲 Write `systemd` unit file for Kestrel | `ASPNETCORE_ENVIRONMENT=Production`; secrets as `Environment=` entries or loaded from `/etc/codefolio/.env` (chmod 600) |
-| 8 | 🔲 Configure Nginx reverse proxy | `proxy_pass` to `127.0.0.1:5000`; `X-Forwarded-For` / `X-Forwarded-Proto` headers |
-| 9 | 🔲 Obtain TLS certificate via Certbot | Let's Encrypt; auto-renewal via cron |
-| 10 | 🔲 Configure UFW firewall | Allow only ports 22, 80, 443 |
-| 11 | 🔲 Write and test deployment script | `dotnet publish` → `scp` artifact to Droplet → `systemctl restart codefolio` |
-| 12 | 🔲 Verify full production smoke test | HTTPS, login, CRUD, contact form, health endpoint |
-| 13 | 🔲 Document PostgreSQL backup strategy | `pg_dump` cron job; store to DigitalOcean Spaces or S3-compatible bucket |
+| 1 | 🔲 Add `UseForwardedHeaders` to `Program.cs` | Required so Kestrel sees real client IP from behind Nginx; uses `Microsoft.AspNetCore.HttpOverrides` (no new package) |
+| 2 | 🔲 Create `CodeFolio/Dockerfile` | Multi-stage build: SDK image for publish, ASP.NET runtime image for final; non-root user; EXPOSE 8080 |
+| 3 | 🔲 Create `nginx/codefolio.conf` | HTTP-only first; HTTPS `server` block added after cert issued in Task 12 |
+| 4 | 🔲 Create `docker-compose.production.yml` | nginx + codefolio-web + postgres; postgres has no host port; secrets from `.env.production` |
+| 5 | 🔲 Update `.gitignore` for `.env.production`; commit Dockerfile and compose files | `.env.production` must never be committed |
+| 6 | 🔲 Provision DigitalOcean Droplet | Ubuntu 24.04, $6–12/month, SSH key auth only |
+| 7 | 🔲 Initial server hardening | Non-root `deploy` user; disable root SSH; UFW (22/80/443); fail2ban |
+| 8 | 🔲 Install Docker + Docker Compose on Droplet | Docker Engine + Compose plugin via Docker's official apt repo |
+| 9 | 🔲 Configure DNS | A records for `@` and `www` pointing to Droplet IP; verify propagation |
+| 10 | 🔲 Deploy the application (HTTP first): build image, transfer to Droplet, create `.env.production`, start the stack | `docker save` + `scp`; copy `docker-compose.production.yml` + `nginx/codefolio.conf`; create `.env.production` on the server (chmod 600, never copied from local); `docker compose -f ... up -d`; verify `/health` |
+| 11 | 🔲 Apply EF Core migrations against production Postgres | Run migration via temporary SDK container on the `codefolio-net` Docker network |
+| 12 | 🔲 Issue TLS certificate via Certbot + update Nginx config for HTTPS | Stop Nginx briefly for standalone cert issuance; update conf with HTTPS server block + strong TLS settings + security headers; set up renewal cron hook |
+| 13 | 🔲 Full production smoke test | HTTPS cert validity, HTTP→HTTPS redirect, `/health`, auth, Project CRUD, contact form, rate limiting, security headers |
+| 14 | 🔲 Document and test deployment update workflow | `docker build` → `docker save/scp` → `docker load` → `docker compose up -d --no-deps codefolio-web`; rollback procedure |
+| 15 | 🔲 Set up PostgreSQL backup | `pg_dump` cron (3 AM daily, 14-day retention); test restore procedure; optional: off-site to DigitalOcean Spaces |
 
 ---
 
@@ -211,32 +221,38 @@ No existing controllers, views, or services are modified. If the AI endpoint fai
 
 ---
 
-## Open Architectural Concerns (Carry-Forward from Initial Assessment)
+## Open Architectural Concerns
 
-These are known issues not yet addressed by any phase. They should be resolved before or during Phase 2.
-
-| Issue | Severity | Phase to Address |
-|-------|----------|-----------------|
+| Issue | Severity | Status |
+|-------|----------|--------|
 | ~~Anonymous access to `[Authorize]` pages redirects to `/Account/Login`, which 404s~~ | ✅ Resolved 2026-07-27 | `LoginPath` configured in `Program.cs`; verified via Playwright |
+| ~~`EmailSender` throws at startup if `SendGrid:ApiKey` is absent~~ | ✅ Resolved 2026-07-28 | Phase 2, Task 4 — graceful degradation implemented |
+| ~~Contact form has no rate limiting~~ | ✅ Resolved 2026-07-28 | Phase 2, Task 3 — fixed-window 5 req/min limiter applied |
+| ~~`Npgsql.EFCore.PostgreSQL.Design` v1.1.0 in csproj (2016 package, stale)~~ | ✅ Resolved 2026-07-28 | Phase 2, Task 0 — package removed |
+| ~~`AllowedHosts: "*"` in `appsettings.json`~~ | ✅ Resolved 2026-07-28 | Phase 2, Task 5 — production domain placeholder set in `appsettings.Production.json` |
+| ~~No structured logging~~ | ✅ Resolved 2026-07-28 | Phase 2, Task 1 — Serilog with rolling file sink |
+| ~~No health check endpoint~~ | ✅ Resolved 2026-07-28 | Phase 2, Task 2 — `/health` returns 200 Healthy |
 | Duplicate/mis-pathed `jquery.validate.unobtrusive.min.js` script tag in `_Layout.cshtml` 404s on every page load (harmless — correct copy loads via `_ValidationScriptsPartial` on form pages) | 🟢 Low | Not yet assigned — found during Phase 1.5 browser QA |
-| `EmailSender` throws at startup if `SendGrid:ApiKey` is absent entirely; when present but invalid, it logs a warning and the request still succeeds (confirmed gracefully non-fatal at the Contact form) | 🟠 High | Phase 2, Task 4 |
-| Contact form has no rate limiting | 🟠 High | Phase 2, Task 3 |
-| `ResumeContent` stored as raw HTML — XSS risk if multi-user editing ever added | 🟡 Medium | Awareness only for now |
-| `Npgsql.EFCore.PostgreSQL.Design` v1.1.0 in csproj (2016 package, stale) | 🟡 Medium | Phase 2, Task 8 |
-| `AllowedHosts: "*"` in `appsettings.json` | 🟡 Medium | Phase 2, Task 5 |
-| No PostgreSQL backup strategy | 🟡 Medium | Phase 3, Task 13 |
-| No structured logging | 🟡 Medium | Phase 2, Task 1 |
-| No health check endpoint | 🟡 Medium | Phase 2, Task 2 |
+| `ResumeContent` stored as raw HTML — XSS risk if multi-user editing ever added | 🟡 Medium | Awareness only — not a current risk given single-admin design |
+| No PostgreSQL backup strategy | 🟡 Medium | Phase 3, Task 15 |
 
 ---
 
-## Recommended Next Action
+## Current Status
 
-**Phase 1 and Phase 1.5 are both fully complete and validated, including real browser-based QA.** No further work is required to close out these phases.
+**Phases 1, 1.5, and 2 are complete. Phase 2 is tagged in git (`phase-2-production-hardening`); Phases 1 and 1.5 are identifiable by commit hash only.**
 
-Awaiting explicit approval before Phase 2 — Production Preparation begins. See the Open Architectural Concerns table above for what Phase 2 should pick up first (`EmailSender` graceful-degradation, rate limiting, structured logging, health checks, etc.).
+| Phase | Git Reference | Status |
+|-------|---------|--------|
+| Phase 1 — Backend Stabilization | *(part of Phase 1.5 commit)* | ✅ Complete |
+| Phase 1.5 — Dev Environment Containerization | commit `b65e015` | ✅ Complete |
+| Phase 2 — Production Hardening | tag `phase-2-production-hardening` → commit `0b1eb67` | ✅ Complete |
+| Phase 3 — DigitalOcean VPS Deployment | — | 🔲 Next milestone |
+| Phase 4 — Claude AI Assistant Integration | — | 🔲 Pending Phase 3 |
 
-Daily local dev workflow going forward:
+Awaiting explicit approval before Phase 3 begins. Full deployment tutorial: `PHASE_3_DEPLOYMENT.md`.
+
+Daily local dev workflow:
 
 ```bash
 # Start containerized PostgreSQL (if not already running)

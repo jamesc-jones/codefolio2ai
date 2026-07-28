@@ -30,10 +30,14 @@ An ASP.NET Core 9 MVC portfolio application using Razor views, EF Core with Post
        "AdminPassword": "<a local dev password>"
      },
      "SendGrid": {
-       "ApiKey": "CONFIGURE_SENDGRID_LOCALLY"
+       "ApiKey": "CONFIGURE_SENDGRID_LOCALLY",
+       "FromEmail": "your-email@example.com",
+       "FromName": "CodeFolio"
      }
    }
    ```
+
+   `SendGrid:ApiKey` can remain as a placeholder during local development — the app degrades gracefully (contact form submissions are saved to the database, email delivery is skipped with a log warning).
 
 4. Start PostgreSQL:
 

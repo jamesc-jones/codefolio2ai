@@ -88,5 +88,46 @@ Anonymous requests to `[Authorize]`-protected pages previously redirected to `/A
 
 ### Known issues (not yet fixed)
 
-- A duplicate, incorrectly-pathed `<script>` tag in `Views/Shared/_Layout.cshtml` (`~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js`, missing the `/dist/` segment) 404s on every page load. The correctly-pathed copy is loaded separately via `_ValidationScriptsPartial` on pages that need client-side validation (forms), so validation still functions — this is a harmless but noisy console error on every page. Found during Phase 1.5 browser QA; not yet fixed.
-- `EmailSender` logs a warning and continues (does not crash the request) when SendGrid rejects a send (e.g. invalid/placeholder API key) or when `SendGrid:ApiKey` is missing entirely — confirmed via the Contact form: the message still saves to `ContactMessages` and the user still reaches the Thank You page even though the email itself fails. Resolved in Phase 2, Task 4.
+- A duplicate, incorrectly-pathed `<script>` tag in `Views/Shared/_Layout.cshtml` (`~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js`, missing the `/dist/` segment) 404s on every page load. The correctly-pathed copy is loaded separately via `_ValidationScriptsPartial` on pages that need client-side validation (forms), so validation still functions — this is a harmless but noisy console error on every page. Found during Phase 1.5 browser QA; not yet assigned to a phase.
+
+## Production Engineering Experience
+
+> *This section documents production-readiness work completed during Phase 2 for portfolio and interview reference.*
+
+Phase 2 (commit `0b1eb67`, tag `phase-2-production-hardening`) brought CodeFolio from a working local application to a production-hardened platform. The work demonstrates experience beyond feature development:
+
+**Structured Logging (Serilog):** Integrated Serilog with a bootstrap logger pattern that captures startup failures before the host is fully built. Configured console and rolling daily file sinks with a 14-day retention window. Applied environment-specific log level overrides — verbose in development, `Warning`-minimum in production to reduce disk usage.
+
+**Health Monitoring:** Exposed a `/health` endpoint using ASP.NET Core's built-in health check infrastructure. The endpoint is anonymous (no authentication required) and returns a machine-readable status used by Nginx upstream health probes and external uptime monitors.
+
+**Rate Limiting:** Applied ASP.NET Core's built-in fixed-window rate limiter to the contact form POST action — the application's primary abuse surface. Scoped precisely to the POST endpoint only (not page views or other routes), with HTTP 429 rejection and a user-facing message. Middleware ordering relative to authentication and routing was verified.
+
+**Email Reliability:** Eliminated a class of startup failures — `EmailSender` previously threw `ArgumentNullException` at construction if `SendGrid:ApiKey` was absent, bringing down the entire application. Replaced with graceful degradation: the service logs a startup warning, marks itself as disabled, and allows all contact submissions to succeed (saving to the database) even when email delivery is unavailable. Network-level send failures are caught, logged, and do not propagate to the caller.
+
+**Production Configuration Management:** Created `appsettings.Production.json` as a committed, secret-free template that documents the shape of production configuration. Real secrets are supplied at runtime via environment variables following ASP.NET Core's `__`-separator naming convention (`ConnectionStrings__DefaultConnection`, `SendGrid__ApiKey`, etc.), keeping them out of source control entirely.
+
+**Release Validation:** Verified `dotnet publish -c Release` output for security (no `appsettings.Development.json` in output), confirmed `appsettings.Production.json` is present, and ran a full browser regression test post-publish covering authentication, CRUD workflows, and the contact form.
+
+*Implemented structured logging, health monitoring, rate limiting, production configuration management, and release validation for an ASP.NET Core MVC portfolio platform — demonstrating experience in application reliability, operational observability, security-conscious configuration, and deployment readiness.*
+
+### Phase 3 — Production Deployment (planned, not yet executed)
+
+> *This section will be updated to reflect completed work once Phase 3 is executed. The following documents the planned scope for portfolio reference.*
+
+Phase 3 deploys the hardened application to a DigitalOcean VPS using a full Docker Compose stack, demonstrating production infrastructure experience beyond application code:
+
+**Containerization:** Multi-stage Dockerfile for ASP.NET Core 9 — SDK image for `dotnet publish -c Release`, minimal ASP.NET runtime image for the final artifact. Non-root process user, deterministic layer caching via `COPY *.csproj` before full source copy.
+
+**Container Orchestration:** Three-service `docker-compose.production.yml` (Nginx + ASP.NET Core + PostgreSQL) on a private Docker bridge network. Postgres has no host port exposure — accessible only within the network. `depends_on: condition: service_healthy` ensures the app never starts before the database is ready.
+
+**Reverse Proxy + TLS:** Nginx container handles TLS termination via Let's Encrypt / Certbot. Strong TLS settings (TLSv1.2+, ECDHE cipher suite), HTTP → HTTPS redirect, security response headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`). Automatic certificate renewal via cron hook that reloads Nginx without restarting the container.
+
+**Server Hardening:** UFW firewall (ports 22/80/443 only), fail2ban SSH brute-force protection, non-root deploy user with SSH key auth, root SSH login disabled.
+
+**Secrets Management:** All production secrets in a `chmod 600` `.env.production` file on the server — never in source control. ASP.NET Core's `__`-separator env var convention maps Docker Compose environment variable passthrough directly to the config system, eliminating a separate secrets store.
+
+**Operational Backup:** Daily `pg_dump` cron at 3 AM with 14-day local retention and optional DigitalOcean Spaces off-site copy. Restore procedure tested against a scratch database, not just assumed.
+
+**Deployment Workflow:** `docker build → docker save → scp → docker load → docker compose up -d --no-deps` with git-hash image tags for rollback traceability. Zero-downtime consideration documented (tradeoffs noted).
+
+*Full tutorial: `PHASE_3_DEPLOYMENT.md`.*
