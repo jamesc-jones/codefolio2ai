@@ -1,5 +1,11 @@
 # Production stack: Nginx + ASP.NET Core app + PostgreSQL
 # Usage: docker compose -f docker-compose.production.yml --env-file .env.production up -d
+#
+# codefolio-web now pulls from GHCR instead of a locally-loaded image. Before this
+# takes effect on the server, the VPS must be authenticated to GHCR (see
+# PHASE_5_MANUAL_PRODUCTION_EXECUTION.md Phase 5.4.2) and at least one image must
+# have been pushed there by the CI/CD workflow — otherwise `docker compose pull`
+# will fail to find it. Do not scp this file to the server until both are true.
 
 services:
 
@@ -20,7 +26,7 @@ services:
     restart: unless-stopped
 
   codefolio-web:
-    image: codefolio:latest
+    image: ghcr.io/jamesc-jones/codefolio:latest
     container_name: codefolio_web
     environment:
       - ASPNETCORE_ENVIRONMENT=Production

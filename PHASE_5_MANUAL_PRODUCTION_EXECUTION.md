@@ -520,7 +520,7 @@ Only consider Scenario A fully validated once all five checks pass, not just the
 
 **This is the highest-risk task in Phase 5** — it's the only one that changes how deployment itself works. Everything above this point is additive or reversible with a simple restart; this one changes the mechanism you'd rely on if something later goes wrong.
 
-**✅ Repository-side — already done:** `.github/workflows/deploy.yml` exists in the repo and is YAML-valid. It is **not active** — pushing to `main` right now would run the build job successfully (it only needs the automatically-provided `GITHUB_TOKEN`), but the deploy job would fail immediately, since the required secrets don't exist yet and `docker-compose.production.yml` still points at a locally-loaded image, not GHCR.
+**✅ Repository-side — already done:** `.github/workflows/deploy.yml` now has three jobs — `test` (restores, builds, and runs the new `CodeFolio.Tests` project; nothing downstream runs if this fails), `build-and-push`, and `deploy` — and is YAML-valid. `docker-compose.production.yml` has also already been updated to `image: ghcr.io/jamesc-jones/codefolio:latest`. **None of this is active** — pushing to `main` right now would run `test` and `build-and-push` successfully, but the `deploy` job would fail immediately, since `VPS_HOST`/`VPS_SSH_KEY` don't exist yet and the VPS isn't authenticated to GHCR.
 
 **Before starting, verify:**
 - [ ] You've decided to use GHCR (the workflow is written for it — switching registries would mean rewriting it)
@@ -572,28 +572,31 @@ Expected: `Login Succeeded`. This persists in `/home/deploy/.docker/config.json`
 
 ---
 
-### 5.4.3 Update docker-compose.production.yml — only after 5.4.1 and 5.4.2 are done
+### 5.4.3 docker-compose.production.yml — already updated in the repo, not yet on the server
 
-**Not yet applied — do this last, deliberately.** Changing the image reference before GHCR auth and secrets exist would break the *current, working* manual deploy method the moment anyone next runs it, since `docker load` populates the local image cache under `codefolio:latest`, not `ghcr.io/.../codefolio:latest`.
-
-When ready:
+`docker-compose.production.yml` already reads:
 
 ```yaml
   codefolio-web:
-    image: ghcr.io/YOUR_GITHUB_USERNAME/codefolio:latest
+    image: ghcr.io/jamesc-jones/codefolio:latest
 ```
 
-Commit this change only once you're prepared to fully cut over.
+**This has not been copied to the live server yet — do that last, deliberately, only after 5.4.1 and 5.4.2 above are done.** Applying it there before GHCR auth and secrets exist would break the *current, working* manual deploy method the moment anyone next runs it, since `docker load` populates the local image cache under `codefolio:latest`, not `ghcr.io/jamesc-jones/codefolio:latest`.
+
+```bash
+scp docker-compose.production.yml deploy@YOUR_DROPLET_IP:/home/deploy/codefolio/docker-compose.production.yml
+```
 
 ---
 
 ### 5.4.4 Run the first workflow manually
 
-GitHub → Actions tab → select "Build and Deploy to Production" → Run workflow (uses the `workflow_dispatch` trigger already in the file, so you don't have to risk a real `git push` for the first attempt).
+GitHub → Actions tab → select "Build, Test, and Deploy to Production" → Run workflow (uses the `workflow_dispatch` trigger already in the file, so you don't have to risk a real `git push` for the first attempt).
 
-Watch both jobs:
+Watch all three jobs:
+- `test` — restores, builds, and runs `CodeFolio.Tests` (`ContactController`/`ProjectController` unit tests). If this fails, nothing else runs — no image is built, nothing is deployed.
 - `build-and-push` — builds the image, pushes to GHCR
-- `deploy` — SSHes in, tags the currently-running image as `:previous` (so a real rollback target exists if this fails), pulls the new image, restarts only `codefolio-web`, checks `/health`
+- `deploy` — SSHes in, tags the currently-running image as `:previous` (so a real rollback target exists if this fails), pulls the new image via `docker compose pull`, restarts only `codefolio-web` via `docker compose up -d` (idempotent — safe to re-run), checks `/health`
 
 ---
 

@@ -713,29 +713,33 @@ Only consider recovery complete once all six checks pass.
 
 **Strategy:** Use GitHub Container Registry (GHCR) — free, integrated with GitHub Actions, no additional account needed.
 
-**Repository-side status:** `.github/workflows/deploy.yml` already exists in the repo with the exact content below (including a fix to the original draft: the failure-path rollback referenced a `:previous` image tag that nothing ever created — the workflow now tags the currently-running image as `:previous` right before deploying the new one, so an automatic rollback has something real to roll back to). **The pipeline is not yet active** — pushing to `main` right now would run the `build-and-push` job successfully (it only needs `GITHUB_TOKEN`, which GitHub provides automatically), but the `deploy` job would fail, since `VPS_HOST`/`VPS_SSH_KEY` secrets don't exist yet and `docker-compose.production.yml` still points at a locally-loaded `codefolio:latest` image rather than GHCR. Do not remove the existing manual `build → save → scp → load → compose up` deployment method until this has been validated end-to-end.
+**Repository-side status:** `.github/workflows/deploy.yml` now has three jobs — `test` (restores, builds, and runs the new `CodeFolio.Tests` project; `build-and-push` and `deploy` will not run if this fails), `build-and-push` (unchanged, includes the `:previous`-tag rollback fix from the original draft), and `deploy` (updated to `docker compose pull` + `up -d`, matching the GHCR image reference below). `docker-compose.production.yml` has also already been updated in the repo to `image: ghcr.io/jamesc-jones/codefolio:latest`. **None of this is active on the live server yet** — pushing to `main` right now would run `test` and `build-and-push` successfully, but the `deploy` job would fail, since `VPS_HOST`/`VPS_SSH_KEY` secrets don't exist yet and the VPS isn't authenticated to GHCR. Do not `scp` the updated `docker-compose.production.yml` to the server, and do not remove the existing manual `build → save → scp → load → compose up` deployment method, until this has been validated end-to-end.
 
 ---
 
-### 5.4a — Make the Docker Image Accessible from GHCR
+### 5.4.0 — Test Gate (already created)
 
-**Deliberately not yet applied to `docker-compose.production.yml`.** Making this change now would break the *currently working* manual `build → save → scp → load → compose up` deployment method, since `docker load` populates the local image cache under `codefolio:latest`, not `ghcr.io/.../codefolio:latest`. Only make this change once the GHCR login (below) and the workflow secrets (5.4b) are in place and you're ready to cut over — otherwise a subsequent manual deploy would silently fail to find the image it expects.
+A minimal xUnit project, `CodeFolio.Tests/`, now exists and is registered in `CodeFolio.sln`. It contains two controller-level unit tests, run against EF Core's in-memory provider (no real Postgres needed in CI):
 
-The `docker-compose.production.yml` currently uses `image: codefolio:latest` (a locally loaded image). When ready to cut over, update the `codefolio-web` service to pull from GHCR:
+- `ContactControllerTests.Index_Post_WithValidMessage_RedirectsToThankYouAndPersists` — posts a valid `ContactMessage`, asserts a redirect to `ThankYou` and that the message persisted to the in-memory `AppDbContext`
+- `ProjectControllerTests.Index_Get_ReturnsViewResult_WithProjectList` — seeds one project, asserts `Index()` returns a `ViewResult` with that project in its model
 
-**In `docker-compose.production.yml`**, change:
+Both were run locally (`dotnet test CodeFolio.Tests/CodeFolio.Tests.csproj`) and pass. One real gotcha surfaced and was fixed during this: instantiating `ContactController` directly (outside the real MVC pipeline) leaves `TempData` null, since nothing has wired up an `ITempDataProvider` — the controller's `TempData["SentAt"] = ...` line threw a `NullReferenceException` until the test explicitly assigned `controller.TempData = new TempDataDictionary(new DefaultHttpContext(), new NullTempDataProvider())` with a no-op fake provider (`CodeFolio.Tests/Fakes/NullTempDataProvider.cs`). This is a common, well-known unit-testing gotcha for controllers that touch `TempData` — not a defect in `ContactController` itself.
+
+The workflow's new `test` job (`dotnet restore` → `dotnet build` → `dotnet test`) runs first and gates everything downstream: `build-and-push` declares `needs: test`, so a test failure stops the pipeline before an image is ever built or pushed.
+
+---
+
+### 5.4a — The Docker Image Reference (already updated)
+
+`docker-compose.production.yml` in the repo already reads:
 
 ```yaml
   codefolio-web:
-    image: codefolio:latest
+    image: ghcr.io/jamesc-jones/codefolio:latest
 ```
 
-To:
-
-```yaml
-  codefolio-web:
-    image: ghcr.io/YOUR_GITHUB_USERNAME/codefolio:latest
-```
+**This has not been copied to the live server.** Applying it there before the GHCR login (5.4.2 below) and workflow secrets exist would break the *currently working* manual `build → save → scp → load → compose up` deployment method, since `docker load` populates the local image cache under `codefolio:latest`, not `ghcr.io/jamesc-jones/codefolio:latest`. Only `scp` this file to the server once GHCR login and the workflow secrets are in place and you're ready to cut over.
 
 Replace `YOUR_GITHUB_USERNAME` with your actual GitHub username (lowercase).
 
@@ -788,14 +792,14 @@ Paste the entire contents (including `-----BEGIN...` and `-----END...` lines) as
 `.github/workflows/deploy.yml` already exists in the repository with the content below — nothing to create here. This is what's on disk now:
 
 ```yaml
-name: Build and Deploy to Production
+name: Build, Test, and Deploy to Production
 
-# Not yet active as a real deployment pipeline: VPS_HOST and VPS_SSH_KEY secrets
-# are not configured, and the production compose file still points at a locally
-# loaded image (codefolio:latest), not GHCR. See PHASE_5_PRODUCTION_HARDENING.md
-# Phase 5.4 for the remaining manual setup steps before this can deploy anything.
-# Until then, the existing build -> save -> scp -> load -> compose up workflow
-# documented in PHASE_3_DEPLOYMENT.md / PHASE_4_AI_ASSISTANT.md remains authoritative.
+# Requires GitHub repository secrets before the deploy job can succeed:
+#   VPS_HOST     - the droplet's public IP address
+#   VPS_SSH_KEY  - private key that the VPS "deploy" user's authorized_keys accepts
+# The deploy job hardcodes the SSH username as "deploy" (this project's one
+# established convention) rather than reading it from a secret.
+# See PHASE_5_MANUAL_PRODUCTION_EXECUTION.md Phase 5.4 for full setup steps.
 
 on:
   push:
@@ -808,9 +812,32 @@ env:
   IMAGE_NAME: ${{ github.repository_owner }}/codefolio
 
 jobs:
+  test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore CodeFolio.sln
+
+      - name: Build
+        run: dotnet build CodeFolio.sln --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test CodeFolio.Tests/CodeFolio.Tests.csproj --no-build --configuration Release --logger "console;verbosity=normal"
+
   build-and-push:
     name: Build Docker Image
     runs-on: ubuntu-latest
+    needs: test   # will not run if the test job fails
     permissions:
       contents: read
       packages: write   # required to push to GHCR
@@ -848,7 +875,7 @@ jobs:
   deploy:
     name: Deploy to Production VPS
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: build-and-push   # transitively requires test to have passed too
     environment: production   # optional: configure required reviewers in GitHub Environments
 
     steps:
@@ -870,10 +897,11 @@ jobs:
               docker tag "${CURRENT_ID}" "${IMAGE}:previous" || true
             fi
 
-            docker pull "${IMAGE}:latest"
-
-            # Restart only the web container — Nginx and Postgres stay running
             cd /home/deploy/codefolio
+            docker compose -f docker-compose.production.yml --env-file .env.production pull codefolio-web
+
+            # Restart only the web container — Nginx and Postgres stay running.
+            # up -d is idempotent: safe to re-run even if nothing changed.
             docker compose -f docker-compose.production.yml --env-file .env.production \
               up -d --no-deps codefolio-web
 
