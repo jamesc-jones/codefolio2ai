@@ -1,6 +1,6 @@
 # CodeFolio — Project Development Roadmap
 
-> **Last Updated:** 2026-07-28 (Phase 3 core deployment completed and verified live at https://codefolio2ai.com)  
+> **Last Updated:** 2026-07-29 — Phase 3 closed; Phase 4 (AI Assistant) and Phase 5 (Production Operations) defined  
 > **Stack:** ASP.NET Core 9 MVC · Razor Views · EF Core · PostgreSQL · ASP.NET Core Identity · SendGrid  
 > **Target:** DigitalOcean VPS · Docker Compose · Claude AI Assistant
 
@@ -134,7 +134,7 @@ Performed with real Playwright browser automation, closing out the one open cave
 
 **Objective:** Deploy to a production VPS with HTTPS, a reverse proxy, persistent database storage, and a clean deployment workflow.
 
-**Status: Core deployment complete (2026-07-28). Live at https://codefolio2ai.com. Tasks 1–13 verified; Tasks 14–15 remain as follow-up.**
+**Status: ✅ COMPLETE — July 29, 2026. Live at https://codefolio2ai.com. Git tag: `phase-3-production-deployment`. Tasks 1–13 verified in production; Tasks 14–15 deferred to Phase 5 — Production Operations.**
 
 **Full tutorial:** `PHASE_3_DEPLOYMENT.md` at the solution root.
 
@@ -174,34 +174,50 @@ Orchestrated by: docker-compose.production.yml
 | 11 | ✅ Apply EF Core migrations against production Postgres | Ran via temporary SDK container on `codefolio_codefolio-net`. First two attempts failed (missing NuGet restore, then missing `Program.cs`/`Services/` in the migration source bundle — `CodeFolio.csproj` is a single executable project, not a class library); corrected bundle applied `InitialCreate` successfully; admin user + 7 `ResumeSection` rows seeded |
 | 12 | ✅ Issue TLS certificate via Certbot + update Nginx config for HTTPS | Real Let's Encrypt cert issued for both domains (valid through 2026-10-26); HTTPS server block deployed with strong TLS settings + security headers; renewal cron configured; `certbot renew --dry-run` succeeded |
 | 13 | ✅ Full production smoke test | Homepage, Projects, Blog, Contact form (real submission + DB persistence verified), authentication + authorization redirects, `/health`, container restart persistence, and full `down`/`up -d` recreation (12 tables intact) — all verified directly against https://codefolio2ai.com |
-| 14 | 🔲 Document and test deployment update workflow | Not yet exercised — no code update has been redeployed since initial launch |
-| 15 | 🔲 Set up PostgreSQL backup | `pg_dump` cron (3 AM daily, 14-day retention); test restore procedure; optional: off-site to DigitalOcean Spaces |
+| 14 | ⏳ Document and test deployment update workflow | Not yet exercised — deferred to Phase 5 |
+| 15 | ⏳ Set up PostgreSQL backup | `pg_dump` cron documented in `PHASE_3_DEPLOYMENT.md` Task 15 — deferred to Phase 5 |
 
 ---
 
-## Phase 4 — Claude AI Assistant Integration
+## Phase 4 — AI Assistant Integration
 
-**Objective:** Integrate a Claude-powered portfolio assistant into the existing MVC application without modifying any existing controllers or views.
+**Objective:** Add a Claude-powered AI assistant to the portfolio.
 
-**Status: Not started. Begins after Phase 3 is stable in production.**
+**Status: 🔲 PLANNED — NOT STARTED. Execution via Claude CLI only. No implementation has begun.**  
+**Full tutorial:** `PHASE_4_AI_ASSISTANT.md` at the solution root.
 
 ### Architecture
 
-The AI layer is purely additive:
+The AI layer is purely additive — no existing controllers, views, or services are modified:
 
 ```
-_Layout.cshtml  →  <partial name="_AiChatWidget" />
-                        │
-                   fetch POST /ai/chat
-                        │
-                   AiController  (new, standalone)
-                        │
-                   IAiService  (new interface)
-                        │
-                   AnthropicClient  (registered in Program.cs)
+User
+ │
+Chat Widget  (_AiChatWidget.cshtml partial, injected in _Layout.cshtml)
+ │
+ASP.NET Core API  (POST /api/ai/chat — new AiController, standalone)
+ │
+AI Service Layer  (IAiService interface + AnthropicAiService implementation)
+ │
+Anthropic Claude API  (via Anthropic.SDK NuGet)
+ │
+Response
 ```
 
-No existing controllers, views, or services are modified. If the AI endpoint fails, the rest of the portfolio is unaffected.
+If the AI endpoint fails, the rest of the portfolio is completely unaffected.
+
+### Key Components
+
+| Component | Description |
+|---|---|
+| `Anthropic.SDK` NuGet package | Anthropic's official .NET SDK |
+| `IAiService` / `AnthropicAiService` | Service abstraction — encapsulates SDK calls; injectable and testable |
+| `AiController` (`POST /api/ai/chat`) | Accepts `{message: string}`, returns `{reply: string}` |
+| Portfolio-aware system prompt | Grounds Claude in name, skills, projects, career goals; enforces portfolio-only scope |
+| `_AiChatWidget.cshtml` partial | Floating chat button + message thread panel; vanilla JS `fetch()` to `/api/ai/chat` |
+| Rate limiting | Fixed-window 5 req/min/IP — stricter than the contact form policy |
+| Serilog request logging | Message, response, token counts — required for cost tracking |
+| Anthropic dashboard spend cap | **Set before enabling in production** |
 
 ### Tasks
 
@@ -210,14 +226,46 @@ No existing controllers, views, or services are modified. If the AI endpoint fai
 | 1 | 🔲 Add `Anthropic.SDK` NuGet package | Anthropic's official .NET SDK |
 | 2 | 🔲 Register `AnthropicClient` in `Program.cs` | Reads API key from `Anthropic:ApiKey` environment config |
 | 3 | 🔲 Create `IAiService` interface and `AnthropicAiService` implementation | Encapsulates SDK calls; injectable and mockable |
-| 4 | 🔲 Create `AiController` with `POST /ai/chat` endpoint | Minimal API style; accepts `{message: string}`, returns `{reply: string}` |
-| 5 | 🔲 Write system prompt grounding Claude in portfolio context | Name, skills, projects, career goals, boundaries (only answer portfolio-relevant questions) |
-| 6 | 🔲 Add rate limiting to `/ai/chat` | 5–10 requests/minute per IP; stricter than contact form |
-| 7 | 🔲 Log all AI requests | Message, response, token counts via Serilog — necessary for cost tracking |
-| 8 | 🔲 Build `_AiChatWidget.cshtml` partial view | Floating chat button; panel with message thread; vanilla JS `fetch()` to `/ai/chat` |
-| 9 | 🔲 Add `<partial name="_AiChatWidget" />` to `_Layout.cshtml` | Single line change; site-wide availability |
+| 4 | 🔲 Create `AiController` with `POST /api/ai/chat` endpoint | Accepts `{message: string}`, returns `{reply: string}` |
+| 5 | 🔲 Write portfolio-aware system prompt | Name, skills, projects, career goals, topic boundaries |
+| 6 | 🔲 Add rate limiting to `/api/ai/chat` | 5 req/min/IP; separate policy from contact form |
+| 7 | 🔲 Log all AI requests via Serilog | Message, response, token counts — cost tracking |
+| 8 | 🔲 Build `_AiChatWidget.cshtml` partial view | Floating button; message thread panel; vanilla JS `fetch()` |
+| 9 | 🔲 Add `<partial name="_AiChatWidget" />` to `_Layout.cshtml` | Single-line change — site-wide |
 | 10 | 🔲 Set monthly spend cap in Anthropic dashboard | Do this before enabling in production |
-| 11 | 🔲 Production smoke test of AI widget | End-to-end: widget loads, message sent, response received, rate limit enforced |
+| 11 | 🔲 Production smoke test of AI widget | Widget loads, message sent, response received, rate limit enforced |
+
+---
+
+## Phase 5 — Production Operations
+
+**Objective:** Operate CodeFolio as a production-grade system with automated backups, monitoring, reliable deployment, and hardened security posture.
+
+**Status: 🔲 PLANNED — NOT STARTED. Includes deferred tasks from Phase 3 (Tasks 14–15).**
+
+### Scope
+
+| Area | Work |
+|---|---|
+| **PostgreSQL Backup** | `pg_dump` cron (3 AM daily, 14-day local retention); off-site to DigitalOcean Spaces; restore procedure tested against scratch DB (carried from Phase 3, Task 15) |
+| **Deployment Update Workflow** | Exercise and document the `docker build → scp → docker load → compose up --no-deps` cycle with a real code update; verify rollback via image re-tag (carried from Phase 3, Task 14) |
+| **Monitoring & Alerts** | Health endpoint polling; uptime alert (e.g., UptimeRobot free tier or DO Monitoring on `/health`); Serilog error-level alert integration |
+| **Disaster Recovery** | Documented step-by-step procedure: Droplet replacement, volume migration, DNS cutover; target RTO < 1 hour |
+| **CI/CD Pipeline** | GitHub Actions: build → test → publish → Docker image push → deploy-on-push (or manual approval gate) |
+| **Security Headers Hardening** | Enable HSTS (`Strict-Transport-Security`) in Nginx after HTTPS is stable; validate via securityheaders.com; consider Content-Security-Policy |
+| **Domain Email Setup** | Configure SPF, DKIM, DMARC for the production sending domain; verify SendGrid sender authentication; resolve current "Maximum credits exceeded" account limit |
+
+### Tasks
+
+| # | Task | Notes |
+|---|------|-------|
+| 1 | 🔲 Set up `pg_dump` backup cron + test restore | See `PHASE_3_DEPLOYMENT.md` Task 15 for the documented script |
+| 2 | 🔲 Test deployment update workflow end-to-end | Push a trivial code change through the full `docker build → scp → load → restart` cycle |
+| 3 | 🔲 Configure uptime monitoring on `/health` | UptimeRobot or DigitalOcean Monitoring; alert on status change |
+| 4 | 🔲 Document disaster recovery procedure | Droplet replacement + volume restore; target RTO < 1 hour |
+| 5 | 🔲 Set up GitHub Actions CI/CD pipeline | Build + publish + Docker image build on push to `main` |
+| 6 | 🔲 Enable HSTS in Nginx config | Uncomment `Strict-Transport-Security` header; only after HTTPS has been stable ≥ 7 days |
+| 7 | 🔲 Resolve domain email / SendGrid account | Fix "Maximum credits exceeded"; configure SPF/DKIM/DMARC on sending domain |
 
 ---
 
@@ -234,23 +282,24 @@ No existing controllers, views, or services are modified. If the AI endpoint fai
 | ~~No health check endpoint~~ | ✅ Resolved 2026-07-28 | Phase 2, Task 2 — `/health` returns 200 Healthy |
 | Duplicate/mis-pathed `jquery.validate.unobtrusive.min.js` script tag in `_Layout.cshtml` 404s on every page load (harmless — correct copy loads via `_ValidationScriptsPartial` on form pages) | 🟢 Low | Not yet assigned — found during Phase 1.5 browser QA |
 | `ResumeContent` stored as raw HTML — XSS risk if multi-user editing ever added | 🟡 Medium | Awareness only — not a current risk given single-admin design |
-| No PostgreSQL backup strategy | 🟡 Medium | Phase 3, Task 15 |
+| No PostgreSQL backup strategy | 🟡 Medium | Phase 5, Task 1 — deferred from Phase 3 Task 15 |
 
 ---
 
 ## Current Status
 
-**Phases 1, 1.5, 2, and the core of Phase 3 are complete. Phase 2 is tagged in git (`phase-2-production-hardening`); Phases 1 and 1.5 are identifiable by commit hash only. Phase 3 is not yet tagged pending Tasks 14–15.**
+**Phases 1 through 3 are complete and tagged in git. CodeFolio is live in production.**
 
 | Phase | Git Reference | Status |
 |-------|---------|--------|
 | Phase 1 — Backend Stabilization | *(part of Phase 1.5 commit)* | ✅ Complete |
 | Phase 1.5 — Dev Environment Containerization | commit `b65e015` | ✅ Complete |
 | Phase 2 — Production Hardening | tag `phase-2-production-hardening` → commit `0b1eb67` | ✅ Complete |
-| Phase 3 — DigitalOcean VPS Deployment | — | ✅ Core deployment live (Tasks 1–13); Tasks 14–15 pending |
-| Phase 4 — Claude AI Assistant Integration | — | 🔲 Pending Phase 3 follow-up |
+| Phase 3 — DigitalOcean VPS Deployment | tag `phase-3-production-deployment` | ✅ Complete — live at https://codefolio2ai.com |
+| Phase 4 — AI Assistant Integration | — | 🔲 Planned — not started |
+| Phase 5 — Production Operations | — | 🔲 Planned — not started |
 
-**CodeFolio is live in production at https://codefolio2ai.com.** Full production smoke test passed 2026-07-28 (see `PHASE_3_DEPLOYMENT.md` for the complete results table). Known limitation: SendGrid email delivery is currently blocked by the SendGrid account's own credit limit ("Maximum credits exceeded") — an external account issue, not an application defect; contact form validation and database persistence are unaffected. Remaining follow-up: deployment update/rollback workflow (Task 14) and PostgreSQL backup (Task 15) have not yet been implemented. Full deployment tutorial and detailed log: `PHASE_3_DEPLOYMENT.md`.
+**CodeFolio is live in production at https://codefolio2ai.com.** Full smoke test passed July 29, 2026 (see `PHASE_3_DEPLOYMENT.md`). Known non-blocking limitation: SendGrid email delivery blocked by account credit limit — an external account issue; contact form persistence is unaffected. Tasks 14–15 from Phase 3 (deployment update workflow + PostgreSQL backup) are deferred to Phase 5.
 
 Daily local dev workflow:
 

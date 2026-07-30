@@ -1,6 +1,7 @@
 # Phase 3 — DigitalOcean VPS Deployment Tutorial
 
-> **Status:** ✅ Executed and verified in production 2026-07-28. Tasks 1–13 complete; Tasks 14 (deployment update workflow) and 15 (PostgreSQL backup) remain as follow-up work. Live at https://codefolio2ai.com.
+> **Status:** ✅ COMPLETE — Executed and verified in production. Tasks 1–13 complete. Tasks 14–15 deferred to Phase 5. Live at https://codefolio2ai.com  
+> **Completed:** July 29, 2026 — 3:13 PM  
 > **Created:** 2026-07-28
 > **Prerequisites:** Phase 2 complete, git tag `phase-2-production-hardening` → commit `0b1eb67`
 
@@ -1045,82 +1046,117 @@ docker exec codefolio_postgres_prod \
 
 ---
 
-## Post-Phase-3 Git Checkpoint
+## Architectural Decisions — Resolved
 
-Once all 15 tasks are complete and the smoke test passes:
+These questions were open during tutorial authoring. Decisions made during execution:
 
-```bash
-# Tag the deployment baseline
-git tag -a phase-3-production-deployment \
-  -m "Phase 3 complete: full Docker Compose deployment on DigitalOcean with HTTPS"
-git push origin phase-3-production-deployment
+1. **Container registry vs. `scp`:** Used `docker save / scp` — correct choice for a solo portfolio. No registry needed.
+2. **Zero-downtime deploys:** Acceptable brief gap for a portfolio deployment. Documented in Task 14 workflow.
+3. **Log aggregation:** Serilog rolling file sink to `app-logs` named volume is sufficient for single-server deployment. No external log service needed at this scale.
+4. **HSTS:** Left commented out in Nginx config intentionally. Enable after HTTPS has been stable for at least 7 days.
+5. **DigitalOcean Managed Database:** Self-managed Postgres container is the right call for a portfolio project. Documented backup strategy in Task 15 / Phase 5.
+
+---
+
+## ✅ Phase 3 — Production Deployment COMPLETE
+
+**Completed:** July 29, 2026 — 3:13 PM  
+**Production URL:** https://codefolio2ai.com  
+**Git tag:** `phase-3-production-deployment`  
+**Commit message:** `docs: close out Phase 3 production deployment`
+
+---
+
+### Deployment Architecture
+
 ```
+[Internet: :80 / :443]
+          │
+      [ Nginx ]           container: codefolio_nginx
+          │               TLS termination + reverse proxy
+          │               Let's Encrypt cert (valid through 2026-10-26)
+          │
+  [ codefolio-web ]       container: codefolio_web
+          │               ASP.NET Core 9 MVC — Kestrel on port 8080 (internal)
+          │
+    [ postgres ]          container: codefolio_postgres_prod
+                          PostgreSQL 17 — no host port, named volume: codefolio_pgdata
 
-Commit message for the closeout docs update:
-
-```
-docs: close out Phase 3 production deployment
+All containers on private bridge: codefolio_codefolio-net
+Host: DigitalOcean Droplet (Ubuntu 24.04 LTS, Toronto / TOR1, 1 vCPU / 1 GB RAM)
 ```
 
 ---
 
-## Open Questions for Phase 3 Execution
+### SSL / HTTPS Verification
 
-These items require decisions at implementation time:
-
-1. **Container registry vs. direct `scp`:** The tutorial uses `docker save / scp` for simplicity. For anything beyond a solo project, a private container registry (DigitalOcean Container Registry, free tier available) is cleaner — `docker push / docker pull` instead of file transfers.
-
-2. **Zero-downtime deploys:** `docker compose up -d --no-deps codefolio-web` has a brief gap (seconds) between old container stopping and new one starting. Acceptable for a portfolio. For zero-downtime, consider running two app containers behind Nginx upstream and rolling them one at a time.
-
-3. **Log aggregation:** Serilog's rolling file sink (mounted via `app-logs` volume) is fine for a single server. If you add a second Droplet or want searchable logs, ship to a log service (e.g., Grafana Cloud free tier, Seq).
-
-4. **HSTS:** The `Strict-Transport-Security` header is commented out in the Nginx config. Enable it only after HTTPS has been stable for at least a week — setting it early and then needing to revert to HTTP is painful.
-
-5. **DigitalOcean Managed Database:** Phase 3 uses a self-managed Postgres container. For production systems handling real user data, a managed database offloads backup, failover, and patching to DigitalOcean (~$15/month). For a portfolio, the self-managed approach documented here is appropriate.
+| Check | Result |
+|---|---|
+| Certificate authority | Let's Encrypt |
+| Domains covered | `codefolio2ai.com`, `www.codefolio2ai.com` |
+| Certificate validity | 2026-07-28 through 2026-10-26 (90-day cycle) |
+| Auto-renewal | Cron + `/etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh` — `certbot renew --dry-run` succeeded |
+| HTTP → HTTPS redirect | `301 Moved Permanently` confirmed |
+| Protocol | HTTP/2 on HTTPS |
 
 ---
 
-## Phase 3 Production Deployment Completed (2026-07-28)
+### Docker Services Summary
 
-Tasks 1–13 of this tutorial were executed and verified against the live production environment.
+| Container | Image | Status | Notes |
+|---|---|---|---|
+| `codefolio_nginx` | `nginx:alpine` | Running | Ports 80, 443 bound to host |
+| `codefolio_web` | `codefolio:latest` | Running | Port 8080 internal only |
+| `codefolio_postgres_prod` | `postgres:17-alpine` | Running | No host port; `codefolio_pgdata` volume |
 
-**Production URL:** https://codefolio2ai.com
+---
 
-**Deployment architecture:**
-- DigitalOcean Droplet `codefolio2ai-prod` — Ubuntu 24.04 LTS, Toronto (TOR1), 1 vCPU / 1 GB RAM
-- Three-container Docker Compose stack (`docker-compose.production.yml`): `codefolio_nginx`, `codefolio_web`, `codefolio_postgres_prod`, all on the private `codefolio_codefolio-net` bridge network
-- PostgreSQL 17 (`codefolio_postgres_prod`) — no host port exposed, data in the `codefolio_pgdata` named volume
-- Nginx reverse proxy terminating TLS, proxying to `codefolio-web:8080`
+### Database Persistence Confirmation
 
-**SSL/HTTPS:**
-- Let's Encrypt certificate issued for `codefolio2ai.com` and `www.codefolio2ai.com`
-- Valid 2026-07-28 through 2026-10-26 (standard 90-day Let's Encrypt lifecycle)
-- Automatic renewal configured via cron + Nginx reload hook; `certbot renew --dry-run` succeeded
-- HTTP → HTTPS redirect confirmed (`301 Moved Permanently`)
-
-**Database:**
-- Production database `CodeFolioDB`, user `codefolio_prod`
-- `InitialCreate` EF Core migration applied via a disposable SDK container on the app's Docker network. This required rebuilding the migration source bundle to include `Program.cs` and `Services/` — the original bundle (just `Migrations/`/`Data/`/`Models/`/`.csproj`) failed to compile because `CodeFolio.csproj` is a single executable project, not a class library, so the whole source tree needed to build as one unit.
+- Database: `CodeFolioDB`, user: `codefolio_prod`
+- `InitialCreate` EF Core migration applied via a disposable SDK container on the `codefolio_codefolio-net` Docker network
+  - **Migration note:** required the full source tree (not just `Migrations/` + `Data/` + `Models/`) because `CodeFolio.csproj` is a single-project executable, not a class library — the entire project must compile as a unit
 - Admin user and 7 `ResumeSection` rows seeded by `DbInitializer` on first successful start
-- Confirmed intact across both a container restart and a full `down`/`up -d` recreation
+- 12 tables confirmed present in production (`\dt`)
+- **Data survived:** both a `docker compose restart` and a full `docker compose down → up -d` container recreation
 
-**Production smoke test results (2026-07-28):**
+---
+
+### Production Smoke Test Results
 
 | Test | Result | Notes |
 |---|---|---|
-| Homepage | ✅ Pass | HTTPS, navbar, assets, footer all render; one pre-existing harmless console error (documented in `CLAUDE.md`) |
-| Projects page | ✅ Pass | Loads correctly; zero records is expected — `DbInitializer` doesn't seed sample Projects |
-| Blog page | ✅ Pass | Loads correctly; zero records is expected — `DbInitializer` doesn't seed sample BlogPosts |
-| Contact form | ✅ Pass | Client validation, submission, and `ContactMessages` persistence all verified with a real test submission |
-| Authentication | ✅ Pass | Login page loads, admin login succeeds, anonymous access to admin routes correctly redirects to login |
-| `/health` endpoint | ✅ Pass | Returns `Healthy` — this is an existing feature since Phase 2, not new |
-| Container restart persistence | ✅ Pass | Data intact after `docker compose restart` |
-| Full container recreation | ✅ Pass | Data intact after `down` / `up -d`; all 12 tables present |
+| HTTPS loads without cert warning | ✅ Pass | Valid Let's Encrypt cert |
+| HTTP redirects to HTTPS | ✅ Pass | `301 Moved Permanently` |
+| Homepage renders | ✅ Pass | Nav, assets, footer all correct |
+| Projects page | ✅ Pass | Loads; zero records expected (no seeded content) |
+| Blog page | ✅ Pass | Loads; zero records expected |
+| Resume page | ✅ Pass | 7 seeded sections render |
+| Contact form — validation | ✅ Pass | Client-side required-field enforcement |
+| Contact form — submission | ✅ Pass | Row persisted to `ContactMessages` |
+| `/health` endpoint | ✅ Pass | Returns `Healthy` (HTTP 200) |
+| Admin login | ✅ Pass | `admin@example.com` + production password succeeds |
+| Authorization enforcement | ✅ Pass | Anonymous requests to protected routes redirect to `/Identity/Account/Login` |
+| Container restart persistence | ✅ Pass | `docker compose restart` — all data intact |
+| Full container recreation | ✅ Pass | `down → up -d` — all 12 tables and seeded data intact |
 
-**Known limitations:**
-- SendGrid email delivery is currently rejected by the SendGrid account itself ("Maximum credits exceeded") — an external account-plan limitation, not an application defect. Per Phase 2's `EmailSender` hardening, contact form submissions still validate and persist to `ContactMessages` correctly regardless of email delivery status.
-- Tasks 14 (deployment update workflow) and 15 (PostgreSQL backup) have not been executed/tested yet — recommended as near-term follow-up before relying on this deployment long-term.
-- No sample Project/BlogPost content exists — expected, not a defect.
-- The pre-existing harmless `jquery-validation-unobtrusive` console 404 (documented in `CLAUDE.md`'s Known Issues) is present in production, same as in development.
+---
 
-*Tutorial retained above as the reference procedure for future redeployments, updates, or a second environment.*
+### Known Non-Blocking Limitations
+
+| Item | Severity | Classification |
+|---|---|---|
+| SendGrid email delivery rejected ("Maximum credits exceeded") | Non-blocking | External account-plan limit — not an application defect. `EmailSender` degrades gracefully per Phase 2 hardening; contact submissions persist regardless. | 
+| `jquery-validation-unobtrusive` console 404 | Non-blocking | Pre-existing (since Phase 1); harmless; documented in `CLAUDE.md` Known Issues |
+| No sample Project/BlogPost content | Non-blocking | Expected — `DbInitializer` does not seed portfolio content |
+| Tasks 14–15 (deployment workflow + backup) not yet tested | Follow-up | Deferred to Phase 5. Do not rely on this deployment long-term until backup is in place. |
+
+---
+
+### What Remains — Phase 5 Scope
+
+Tasks 14 (deployment update workflow) and 15 (PostgreSQL backup strategy) from this tutorial are documented but not yet executed. They move into **Phase 5 — Production Operations** alongside monitoring, CI/CD, and security header hardening. See `ROADMAP.md`.
+
+---
+
+*Tutorial steps 1–13 retained above as the reference procedure for future redeployments, updates, or a second environment.*

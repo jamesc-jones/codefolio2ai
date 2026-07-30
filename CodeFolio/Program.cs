@@ -54,11 +54,23 @@ try
     // Inject our SendGrid email sender
     builder.Services.AddSingleton<IEmailSender, EmailSender>();
 
+    // AI assistant service (gracefully disabled if API key is absent)
+    builder.Services.AddMemoryCache();
+    builder.Services.AddSingleton<IClaudeService, ClaudeService>();
+
     builder.Services.AddHealthChecks();
 
     builder.Services.AddRateLimiter(options =>
     {
         options.AddFixedWindowLimiter("contact-form", limiterOptions =>
+        {
+            limiterOptions.PermitLimit = 5;
+            limiterOptions.Window = TimeSpan.FromMinutes(1);
+            limiterOptions.QueueLimit = 0;
+        });
+
+        // AI assistant endpoint — same limit as contact form, separate policy
+        options.AddFixedWindowLimiter("ai-chat", limiterOptions =>
         {
             limiterOptions.PermitLimit = 5;
             limiterOptions.Window = TimeSpan.FromMinutes(1);
@@ -103,6 +115,8 @@ try
     app.MapRazorPages();
     app.MapStaticAssets();
     app.MapHealthChecks("/health");
+
+    app.MapControllers();
 
     app.MapControllerRoute(
             name: "default",

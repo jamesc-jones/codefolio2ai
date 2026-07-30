@@ -110,28 +110,28 @@ Phase 2 (commit `0b1eb67`, tag `phase-2-production-hardening`) brought CodeFolio
 
 *Implemented structured logging, health monitoring, rate limiting, production configuration management, and release validation for an ASP.NET Core MVC portfolio platform — demonstrating experience in application reliability, operational observability, security-conscious configuration, and deployment readiness.*
 
-### Phase 3 — Production Deployment (Complete)
+### Phase 3 — Production Deployment ✅ COMPLETE
 
-> *This section documents production deployment work completed during Phase 3 for portfolio and interview reference.*
+> *Completed July 29, 2026 — 3:13 PM. Git tag: `phase-3-production-deployment`.*
 
-Phase 3 (deployed and verified 2026-07-28) took CodeFolio live at **https://codefolio2ai.com** on a DigitalOcean VPS using a full Docker Compose stack:
+Phase 3 took CodeFolio live at **https://codefolio2ai.com** on a DigitalOcean VPS using a full Docker Compose stack. The application is stable in production. All smoke tests passed.
 
-**Containerization:** Multi-stage Dockerfile for ASP.NET Core 9 — SDK image for `dotnet publish -c Release`, minimal ASP.NET runtime image for the final artifact. Non-root process user, deterministic layer caching via `COPY *.csproj` before full source copy. A `.dockerignore` excludes `bin/`/`obj/`, preventing stale Windows-path NuGet artifacts from breaking the Linux container build.
+**Containerization:** Multi-stage Dockerfile — SDK image for `dotnet publish -c Release`, ASP.NET 9 runtime image for the final artifact. Non-root `codefolio` process user, deterministic layer caching via `COPY *.csproj` before full source copy. A `.dockerignore` excludes `bin/`/`obj/`, preventing stale Windows-path NuGet artifacts from breaking the Linux container build.
 
-**Container Orchestration:** Three-service `docker-compose.production.yml` (Nginx + ASP.NET Core + PostgreSQL) on a private Docker bridge network (`codefolio-net`). Postgres has no host port exposure — accessible only within the network. `depends_on: condition: service_healthy` ensures the app never starts before the database is ready.
+**Container Orchestration:** Three-service `docker-compose.production.yml` (Nginx + ASP.NET Core + PostgreSQL) on the private `codefolio_codefolio-net` Docker bridge network. Postgres has no host port — accessible only within the network. `depends_on: condition: service_healthy` ensures the app starts only after Postgres passes its healthcheck.
 
-**Reverse Proxy + TLS:** Nginx terminates TLS using a real Let's Encrypt certificate (issued via Certbot standalone mode) covering `codefolio2ai.com`/`www.codefolio2ai.com`, valid through 2026-10-26. Strong TLS settings (TLSv1.2+, ECDHE cipher suite), HTTP → HTTPS redirect, and security response headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`) are all active in production. Automatic renewal is configured via cron + an Nginx reload hook; `certbot renew --dry-run` succeeded.
+**Reverse Proxy + TLS:** Nginx terminates TLS using a Let's Encrypt certificate (Certbot standalone mode) for `codefolio2ai.com`/`www.codefolio2ai.com`, valid through 2026-10-26. TLSv1.2+, ECDHE cipher suite, HTTP → HTTPS redirect (`301`), security headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`) active. Auto-renewal via cron + Nginx reload hook; `certbot renew --dry-run` succeeded.
 
-**Server Hardening:** UFW firewall (ports 22/80/443 only), fail2ban SSH brute-force protection, non-root `deploy` user with SSH key auth, root SSH login disabled.
+**Server Hardening:** UFW (ports 22/80/443 only), fail2ban SSH brute-force protection, non-root `deploy` user, SSH key auth only, root SSH login disabled.
 
-**Database Migration:** EF Core's `InitialCreate` migration applied to production Postgres via a disposable SDK container joined to the app's Docker network. This surfaced a real packaging gap: a migration-only source bundle of just `Migrations/`/`Data/`/`Models/`/`.csproj` failed to compile, since `CodeFolio.csproj` is a single executable project (not a class library) — `Program.cs` and `Services/` (referenced directly by `Program.cs`) had to be included too.
+**Database Migration:** `InitialCreate` applied via a disposable SDK container on the app's Docker network. Key lesson: a migration-only source bundle (`Migrations/`/`Data/`/`Models/`/`.csproj`) fails to compile — `CodeFolio.csproj` is a single executable project, so `Program.cs` and `Services/` must be included in the migration source.
 
-**Secrets Management:** All production secrets in a `chmod 600` `.env.production` file on the server — never in source control. ASP.NET Core's `__`-separator env var convention maps Docker Compose environment variable passthrough directly to the config system, eliminating a separate secrets store.
+**Secrets Management:** All production secrets in `/home/deploy/codefolio/.env.production` (`chmod 600`) on the server — never in source control. ASP.NET Core's `__`-separator env var naming maps Docker Compose passthrough directly to the config system.
 
-**Production Verification:** A full smoke test passed in production — homepage, Projects/Blog pages, contact form submission and database persistence, authentication and authorization redirects, and the `/health` endpoint (returns `Healthy`) were all verified directly against the live site. Both a container restart and a full `down`/`up -d` recreation were tested, with all 12 database tables and seeded data confirmed intact afterward.
+**Production Verification:** Full smoke test passed live — HTTPS, HTTP→HTTPS redirect, homepage, Projects/Blog pages, contact form (submission + DB persistence), authentication and authorization, `/health` (returns `Healthy`). Both a container restart and a full `docker compose down → up -d` recreation verified with all 12 tables and seeded data intact.
 
-**Known limitation:** SendGrid email delivery is currently blocked by the SendGrid account's own credit limit ("Maximum credits exceeded") — an external account-plan issue, not an application defect. Per Phase 2's `EmailSender` hardening, contact form submissions still validate and persist correctly regardless.
+**Known limitation:** SendGrid email delivery currently blocked by the SendGrid account's credit limit ("Maximum credits exceeded") — an external account-plan issue, not an application defect. Per Phase 2 hardening, contact submissions still validate and persist correctly regardless.
 
-**Remaining follow-up (not yet done):** the deployment update/rollback workflow hasn't been exercised yet (no code update has been redeployed since initial launch), and no PostgreSQL backup cron is configured.
+**Deferred to Phase 5:** deployment update/rollback workflow and PostgreSQL backup cron not yet executed.
 
-*Full tutorial and detailed task log: `PHASE_3_DEPLOYMENT.md`.*
+*Full tutorial and task log: `PHASE_3_DEPLOYMENT.md`.*
