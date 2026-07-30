@@ -166,8 +166,18 @@ Phase 4 adds a Claude-powered AI assistant to the portfolio. The feature is enti
 
 *Full tutorial: `PHASE_4_AI_ASSISTANT.md`.*
 
-### Phase 5 — Production Hardening (in progress)
+### Phase 5 — Production Hardening ✅ COMPLETE
 
-Repository-side preparation is complete: an automated backup script (`pg_dump` + gzip + 14-day retention), a three-scenario disaster recovery runbook (app container failure, database container failure, full VPS loss — each ending in a shared post-recovery verification checklist covering health/auth/projects/blog/contact/AI), a GitHub Actions deploy workflow (`.github/workflows/deploy.yml`, syntax-validated but not yet wired to real secrets), and updated Nginx security headers (`nginx/codefolio.conf` now includes HSTS, a codebase-verified Content-Security-Policy, and Permissions-Policy, with syntax validated locally via a throwaway `nginx:alpine` container).
+> *Completed 2026-07-30. Automated backups, uptime monitoring, disaster recovery validation, and Nginx security hardening verified live at https://codefolio2ai.com. Not yet tagged.*
 
-**Not yet done:** none of this has been applied to the live server. The backup script and cron job aren't installed, the Nginx config change hasn't been `scp`'d/reloaded, the CI/CD pipeline has no GitHub secrets configured, and monitoring (UptimeRobot) and domain email require creating external accounts. See `PHASE_5_PRODUCTION_HARDENING.md` for the full sub-phase tutorials, and `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md` for the exact, risk-ordered runbook to execute those steps against the real VPS (backups → Nginx headers → monitoring → disaster recovery dry-run → CI/CD cutover → domain email).
+**Automated Backups:** A `pg_dump` + gzip backup script runs daily via cron on the production VPS (3 AM, 14-day retention), writing to `/opt/backups/codefolio` as `codefolio_YYYY_MM_DD_HHMMSS.sql.gz`. A restore was verified end-to-end against a temporary throwaway database on the same Postgres container — the live `codefolio` database and `pgdata` volume are never touched by the test.
+
+**Monitoring:** UptimeRobot polls both the homepage and `/health` (keyword `Healthy`) every 5 minutes, with email alerting configured.
+
+**Disaster Recovery:** `PHASE_5_PRODUCTION_HARDENING.md` documents three scenarios — application container failure, database container failure, and full VPS loss — each ending in a shared post-recovery verification checklist (health, auth, projects, blog, contact, AI assistant). Scenario A (application container failure and recovery via `docker compose up -d --no-deps codefolio-web`) has been performed live against production.
+
+**Nginx Security Hardening:** `nginx/codefolio.conf` was updated with HSTS, Permissions-Policy, and a Content-Security-Policy built from the app's actual verified resource usage (`cdn.jsdelivr.net` for Bootstrap, `cdnjs.cloudflare.com` for Font Awesome, `'self'`-only images and connections) rather than a generic policy — the original draft in an earlier tutorial pass would have broken every icon on the site. Deployed to the live server; `curl -I https://codefolio2ai.com` confirms all headers present and the CSP matches exactly.
+
+**Follow-up (not blocking this completion):** CI/CD cutover (`.github/workflows/deploy.yml` exists and is YAML-valid, but `VPS_HOST`/`VPS_SSH_KEY` secrets aren't configured and the compose file still loads a local image rather than GHCR) and domain email (SendGrid remains blocked by its account credit limit) are prepared but not yet executed — see `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md` §5.4 and §5.6.
+
+*Full tutorials: `PHASE_5_PRODUCTION_HARDENING.md`, `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md`.*

@@ -1,6 +1,6 @@
 # CodeFolio — Project Development Roadmap
 
-> **Last Updated:** 2026-07-30 — Phase 4 (AI Assistant) complete, deployed, and verified live in production  
+> **Last Updated:** 2026-07-30 — Phase 5 (Production Hardening) complete and verified live in production; CI/CD cutover and domain email remain as follow-up  
 > **Stack:** ASP.NET Core 9 MVC · Razor Views · EF Core · PostgreSQL · ASP.NET Core Identity · SendGrid  
 > **Target:** DigitalOcean VPS · Docker Compose · Claude AI Assistant
 
@@ -257,7 +257,7 @@ Rate-limit behavior (5 req/min/IP) and the earlier local validation pass (empty-
 
 **Objective:** Operate CodeFolio as a production-grade system with automated backups, monitoring, reliable deployment, and hardened security posture.
 
-**Status: 🟡 Phase 5 — Production Hardening in progress. Repository-side preparation (scripts, configs, CI/CD workflow file, disaster recovery runbook) is complete; VPS execution, external accounts (UptimeRobot, GHCR PAT, email provider), and DNS changes are still pending. Full tutorial: `PHASE_5_PRODUCTION_HARDENING.md`. Manual execution runbook: `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md`. Includes deferred tasks from Phase 3 (Tasks 14–15).**
+**Status: ✅ COMPLETE — 2026-07-30. Automated backups, uptime monitoring, disaster recovery validation, and Nginx security hardening are live in production. CI/CD cutover (Task 5) and domain email (Task 7) remain as follow-on work, not blockers to this completion — see "Remaining Follow-Up" below. Full tutorial: `PHASE_5_PRODUCTION_HARDENING.md`. Manual execution runbook: `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md`. Includes deferred tasks from Phase 3 (Tasks 14–15).**
 
 ### Scope
 
@@ -275,13 +275,57 @@ Rate-limit behavior (5 req/min/IP) and the earlier local validation pass (empty-
 
 | # | Task | Notes |
 |---|------|-------|
-| 1 | 🔶 Backup script prepared, not yet installed | Script + cron + restore procedure written in `PHASE_5_PRODUCTION_HARDENING.md` 5.1; execute via `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md` §5.1 |
-| 2 | 🔲 Test deployment update workflow end-to-end | Blocked on Task 5 (CI/CD) validation |
-| 3 | 🔲 Configure uptime monitoring on `/health` | Instructions ready (5.2); requires creating an UptimeRobot account |
-| 4 | ✅ Document disaster recovery procedure | `PHASE_5_PRODUCTION_HARDENING.md` 5.3 — app container failure, DB container failure, and full VPS loss, each with a post-recovery verification checklist; Scenario A dry-run steps in `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md` §5.3 |
-| 5 | 🔶 GitHub Actions workflow created, not yet active | `.github/workflows/deploy.yml` exists and is YAML-valid; requires `VPS_HOST`/`VPS_SSH_KEY` secrets and a GHCR cutover before it can deploy anything |
-| 6 | 🔶 HSTS + CSP + Permissions-Policy added to `nginx/codefolio.conf` locally, syntax-validated | Not yet applied to the live server — requires `scp` + `nginx -t` + reload (5.5) |
-| 7 | 🔲 Resolve domain email / SendGrid account | Instructions ready (5.6); requires an email provider account and live DNS changes |
+| 1 | ✅ Backup script installed on VPS, cron scheduled, restore verified | `PHASE_5_PRODUCTION_HARDENING.md` 5.1 / `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md` §5.1 |
+| 2 | 🔲 Test deployment update workflow end-to-end | Follow-up — tied to Task 5 (CI/CD) cutover |
+| 3 | ✅ Uptime monitoring configured on `/health` and homepage | UptimeRobot — see Production Deployment Summary below |
+| 4 | ✅ Document disaster recovery procedure | `PHASE_5_PRODUCTION_HARDENING.md` 5.3 — app container failure, DB container failure, and full VPS loss, each with a post-recovery verification checklist; Scenario A restart recovery verified live — see Production Validation Results below |
+| 5 | 🔶 GitHub Actions workflow created, not yet active | Follow-up — `.github/workflows/deploy.yml` exists and is YAML-valid; requires `VPS_HOST`/`VPS_SSH_KEY` secrets and a GHCR cutover before it can deploy anything |
+| 6 | ✅ HSTS + CSP + Permissions-Policy applied to production Nginx | Verified live via `curl -I https://codefolio2ai.com` — see Production Validation Results below |
+| 7 | 🔲 Resolve domain email / SendGrid account | Follow-up — instructions ready (5.6); requires an email provider account and live DNS changes |
+
+### Production Deployment Summary
+
+- **VPS:** DigitalOcean Droplet, Ubuntu 24.04 LTS
+- **Deployment:** Docker Compose (`docker-compose.production.yml`)
+- **Services:**
+  - Nginx reverse proxy (`nginx:alpine`)
+  - ASP.NET Core app (`codefolio:latest`)
+  - PostgreSQL 17 (`postgres:17-alpine`)
+- **HTTPS:**
+  - Let's Encrypt certificate (valid through 2026-10-26)
+  - HTTP → HTTPS redirect (301)
+  - Security headers: HSTS, Content-Security-Policy, Permissions-Policy, X-Frame-Options, X-Content-Type-Options, Referrer-Policy
+- **Environment configuration:** `.env.production` supplies all runtime secrets to `docker compose`, following the `__`-separator convention (`ConnectionStrings__DefaultConnection`, `SendGrid__ApiKey`, `Anthropic__ApiKey`, etc.) — no secrets in source control
+- **Monitoring:** UptimeRobot — website monitor (`https://www.codefolio2ai.com`) and health endpoint monitor (`/health`, keyword `Healthy`), both on 5-minute polling
+- **Backup:** PostgreSQL `pg_dump` + gzip backup script installed on the VPS, scheduled via cron (3 AM daily, 14-day retention), with a restore verified against a temporary database
+
+### Production Validation Results (2026-07-30)
+
+| Test | Result | Verified by |
+|---|---|---|
+| Homepage returns 200 OK over HTTPS | ✅ Pass | Directly re-verified via `curl` |
+| `/Project` returns 200 | ✅ Pass | Directly re-verified via `curl` |
+| `/BlogPost` returns 200 | ✅ Pass | Directly re-verified via `curl` |
+| `/Contact` returns 200 | ✅ Pass | Directly re-verified via `curl` |
+| `/Resume` returns 200 | ✅ Pass | Directly re-verified via `curl` |
+| `/health` returns `Healthy` | ✅ Pass | Directly re-verified via `curl` |
+| Security headers (HSTS, CSP, Permissions-Policy, X-Frame-Options, X-Content-Type-Options) present on live responses | ✅ Pass | Directly re-verified via `curl -I` — CSP matches the codebase-derived policy exactly |
+| Contact form: submission → 302 redirect → ThankYou page | ✅ Pass | Directly re-submitted live via Playwright — landed on `/Contact/ThankYou` |
+| Admin authentication (login succeeds) | ✅ Pass | Confirmed |
+| Restart recovery (`docker compose restart` / container recreation) | ✅ Pass | Confirmed |
+| UptimeRobot monitors active and reporting Up | ✅ Pass | Confirmed |
+| Backup + restore test completed on VPS | ✅ Pass | Confirmed |
+
+### Known Improvements (Post-Phase 5)
+
+- **Persist ASP.NET Core DataProtection keys.** No key storage volume or config exists today (verified — nothing in `Program.cs` or `docker-compose.production.yml` configures a persistent key ring). Every container restart or redeploy currently generates a new key ring, silently invalidating all existing login cookies and forcing re-authentication. Low urgency (a resilient, low-friction failure mode) but worth fixing with a mounted volume + `PersistKeysToFileSystem`.
+- **Fix Certbot renewal to use the webroot method.** The certificate was originally issued via `certbot certonly --standalone`, which requires briefly stopping Nginx to rebind port 80. The renewal cron (`certbot renew --quiet`) inherits that same method today, meaning each ~60-day renewal causes a brief outage unless manually mitigated. The webroot path (`/var/www/certbot`) and the matching Nginx `location /.well-known/acme-challenge/` block already exist and are unused — switching renewal to `--webroot` would eliminate the renewal-time downtime entirely.
+- **Optional: SSL certificate expiry monitoring beyond UptimeRobot's free tier**, or an alternative dedicated cert-expiry checker, for earlier warning ahead of the existing 30-day Let's Encrypt auto-renewal window.
+
+### Remaining Follow-Up (not blocking Phase 5 completion)
+
+- **CI/CD cutover (Task 5):** `.github/workflows/deploy.yml` exists and is YAML-valid but is not active — `VPS_HOST`/`VPS_SSH_KEY` GitHub secrets are not configured, and `docker-compose.production.yml` still points at a locally-loaded image rather than GHCR. See `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md` §5.4.
+- **Domain email (Task 7):** `contact@codefolio2ai.com` is not yet live; SendGrid remains blocked by its account credit limit. See `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md` §5.6.
 
 ---
 
@@ -304,7 +348,7 @@ Rate-limit behavior (5 req/min/IP) and the earlier local validation pass (empty-
 
 ## Current Status
 
-**Phases 1 through 4 are complete, tagged, and live in production, including the AI assistant.**
+**Phases 1 through 5 are complete and live in production, including the AI assistant, automated backups, monitoring, and Nginx security hardening.**
 
 | Phase | Git Reference | Status |
 |-------|---------|--------|
@@ -313,9 +357,9 @@ Rate-limit behavior (5 req/min/IP) and the earlier local validation pass (empty-
 | Phase 2 — Production Hardening | tag `phase-2-production-hardening` → commit `0b1eb67` | ✅ Complete |
 | Phase 3 — DigitalOcean VPS Deployment | tag `phase-3-production-deployment` | ✅ Complete — live at https://codefolio2ai.com |
 | Phase 4 — AI Assistant Integration | tag `phase-4-ai-assistant` | ✅ Complete — verified live at https://codefolio2ai.com on 2026-07-30 |
-| Phase 5 — Production Operations | — | 🟡 In progress — repo-side prep complete, VPS execution pending |
+| Phase 5 — Production Operations | *(not yet tagged)* | ✅ Complete — backups, monitoring, disaster recovery, and Nginx security headers verified live on 2026-07-30; CI/CD cutover and domain email remain as follow-up (see Phase 5 section above) |
 
-**CodeFolio is live in production at https://codefolio2ai.com**, including the Claude-powered AI assistant. Known non-blocking limitation: SendGrid email delivery blocked by account credit limit — contact form DB persistence is unaffected. Tasks 14–15 from Phase 3 (deployment update workflow + PostgreSQL backup) are deferred to Phase 5.
+**CodeFolio is live in production at https://codefolio2ai.com**, including the Claude-powered AI assistant, automated daily database backups, UptimeRobot monitoring, and hardened Nginx security headers (HSTS, CSP, Permissions-Policy). Known non-blocking limitations: SendGrid email delivery blocked by account credit limit (contact form DB persistence is unaffected), and the CI/CD pipeline / domain email are prepared but not yet cut over (see Phase 5's "Remaining Follow-Up").
 
 Daily local dev workflow:
 
