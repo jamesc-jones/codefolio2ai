@@ -257,7 +257,7 @@ Rate-limit behavior (5 req/min/IP) and the earlier local validation pass (empty-
 
 **Objective:** Operate CodeFolio as a production-grade system with automated backups, monitoring, reliable deployment, and hardened security posture.
 
-**Status: 🟡 Phase 5 — Production Hardening in progress. Repository-side preparation (scripts, configs, CI/CD workflow file, disaster recovery runbook) is complete; VPS execution, external accounts (UptimeRobot, GHCR PAT, email provider), and DNS changes are still pending. Full tutorial: `PHASE_5_PRODUCTION_HARDENING.md`. Includes deferred tasks from Phase 3 (Tasks 14–15).**
+**Status: 🟡 Phase 5 — Production Hardening in progress. Repository-side preparation (scripts, configs, CI/CD workflow file, disaster recovery runbook) is complete; VPS execution, external accounts (UptimeRobot, GHCR PAT, email provider), and DNS changes are still pending. Full tutorial: `PHASE_5_PRODUCTION_HARDENING.md`. Manual execution runbook: `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md`. Includes deferred tasks from Phase 3 (Tasks 14–15).**
 
 ### Scope
 
@@ -275,10 +275,10 @@ Rate-limit behavior (5 req/min/IP) and the earlier local validation pass (empty-
 
 | # | Task | Notes |
 |---|------|-------|
-| 1 | 🔶 Backup script prepared, not yet installed | Script + cron + restore procedure written in `PHASE_5_PRODUCTION_HARDENING.md` 5.1; requires manual VPS execution |
+| 1 | 🔶 Backup script prepared, not yet installed | Script + cron + restore procedure written in `PHASE_5_PRODUCTION_HARDENING.md` 5.1; execute via `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md` §5.1 |
 | 2 | 🔲 Test deployment update workflow end-to-end | Blocked on Task 5 (CI/CD) validation |
 | 3 | 🔲 Configure uptime monitoring on `/health` | Instructions ready (5.2); requires creating an UptimeRobot account |
-| 4 | ✅ Document disaster recovery procedure | `PHASE_5_PRODUCTION_HARDENING.md` 5.3 — app container failure, DB container failure, and full VPS loss, each with a post-recovery verification checklist |
+| 4 | ✅ Document disaster recovery procedure | `PHASE_5_PRODUCTION_HARDENING.md` 5.3 — app container failure, DB container failure, and full VPS loss, each with a post-recovery verification checklist; Scenario A dry-run steps in `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md` §5.3 |
 | 5 | 🔶 GitHub Actions workflow created, not yet active | `.github/workflows/deploy.yml` exists and is YAML-valid; requires `VPS_HOST`/`VPS_SSH_KEY` secrets and a GHCR cutover before it can deploy anything |
 | 6 | 🔶 HSTS + CSP + Permissions-Policy added to `nginx/codefolio.conf` locally, syntax-validated | Not yet applied to the live server — requires `scp` + `nginx -t` + reload (5.5) |
 | 7 | 🔲 Resolve domain email / SendGrid account | Instructions ready (5.6); requires an email provider account and live DNS changes |
