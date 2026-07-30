@@ -143,3 +143,25 @@ Phase 3 took CodeFolio live at **https://codefolio2ai.com** on a DigitalOcean VP
 **Deferred to Phase 5:** deployment update/rollback workflow and PostgreSQL backup cron not yet executed.
 
 *Full tutorial and task log: `PHASE_3_DEPLOYMENT.md`.*
+
+### Phase 4 — AI Assistant Integration (code complete, not yet deployed)
+
+> *Committed to `main` (commit `ff1a903`); tested locally end-to-end with a real Anthropic API key. No git tag exists yet and nothing has been deployed to the production VPS.*
+
+Phase 4 adds a Claude-powered AI assistant to the portfolio. The feature is entirely additive — no existing controller, view, service, or database schema was modified.
+
+**AI Service Architecture:** Introduced `IClaudeService` / `ClaudeService` as a registered singleton, decoupling the Anthropic SDK from the controller layer. `ClaudeService` follows the same graceful-degradation pattern established in Phase 2 for `EmailSender` — if `Anthropic:ApiKey` is absent or invalid, the service marks itself as disabled at startup and returns HTTP 503 from the endpoint, with no exception propagating to the host.
+
+**Dynamic System Prompt with Database Integration:** The system prompt sent to Claude is not a hardcoded string. It is constructed at startup by querying `ResumeSections` and `Projects` from the database, giving the assistant current, accurate knowledge of the portfolio's actual content. The constructed prompt is cached via `IMemoryCache`, eliminating repeated DB reads on every chat request.
+
+**API Endpoint and Routing:** `AiController` uses `[ApiController]` + attribute routing (`POST /api/ai/chat`). Because the existing pipeline uses `MapControllerRoute` for conventional MVC routing, `app.MapControllers()` was added to register attribute-routed controllers — a minimal, non-breaking pipeline addition.
+
+**Rate Limiting:** A second fixed-window policy (`"ai-chat"`, 5 req/min/IP) was added to the existing `AddRateLimiter` block in `Program.cs`. The middleware call (`UseRateLimiter()`) was already in the pipeline from Phase 2 and required no changes — demonstrating the value of Phase 2's foundation work.
+
+**Chat Widget:** `_ChatWidget.cshtml` is a self-contained partial view (scoped CSS embedded, no external stylesheet) injected into `_Layout.cshtml` before `</body>`, making it available on every page. `wwwroot/js/chat.js` is an IIFE-scoped vanilla JavaScript fetch client with explicit handling for HTTP 429, 503, network failures, and a loading state. All AI response text is rendered via `textContent` (not `innerHTML`), preventing XSS from any model output.
+
+**Secrets and Deployment (planned, not yet executed):** `Anthropic__ApiKey` follows the same `__`-separator env var convention established in Phase 2. Deployment will require adding the real key to `/home/deploy/codefolio/.env.production` on the server (already passed through in `docker-compose.production.yml`) and restarting only the `codefolio-web` container (`--no-deps`), leaving Nginx and Postgres running throughout to preserve zero downtime — the same pattern used for prior config-only changes.
+
+**Observability:** `ClaudeService` logs the input and output token count of every API response via Serilog, enabling cost visibility without any external billing dashboard monitoring.
+
+*Full tutorial: `PHASE_4_AI_ASSISTANT.md`.*

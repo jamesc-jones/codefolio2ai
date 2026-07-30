@@ -1,6 +1,6 @@
 # CodeFolio — Project Development Roadmap
 
-> **Last Updated:** 2026-07-29 — Phase 3 closed; Phase 4 (AI Assistant) and Phase 5 (Production Operations) defined  
+> **Last Updated:** 2026-07-30 — Phase 4 (AI Assistant) code complete, committed, tested locally; not yet deployed  
 > **Stack:** ASP.NET Core 9 MVC · Razor Views · EF Core · PostgreSQL · ASP.NET Core Identity · SendGrid  
 > **Target:** DigitalOcean VPS · Docker Compose · Claude AI Assistant
 
@@ -183,57 +183,75 @@ Orchestrated by: docker-compose.production.yml
 
 **Objective:** Add a Claude-powered AI assistant to the portfolio.
 
-**Status: 🔲 PLANNED — NOT STARTED. Execution via Claude CLI only. No implementation has begun.**  
+**Status: 🔶 CODE COMPLETE — implemented, committed to `main`, and validated end-to-end in local testing with a real Anthropic API key. Not yet deployed to production.**  
 **Full tutorial:** `PHASE_4_AI_ASSISTANT.md` at the solution root.
 
 ### Architecture
 
-The AI layer is purely additive — no existing controllers, views, or services are modified:
+The AI layer is purely additive — no existing controllers, views, or services were modified:
 
 ```
-User
+User (browser)
  │
-Chat Widget  (_AiChatWidget.cshtml partial, injected in _Layout.cshtml)
+_ChatWidget.cshtml  (partial view, injected in _Layout.cshtml — site-wide)
+ │  vanilla JS fetch(), in-memory message history, loading state, error handling
  │
-ASP.NET Core API  (POST /api/ai/chat — new AiController, standalone)
+POST /api/ai/chat  (AiController — attribute-routed, separate from MVC routes)
+ │  [EnableRateLimiting("ai-chat")]  5 req/min/IP  →  HTTP 429 on limit
  │
-AI Service Layer  (IAiService interface + AnthropicAiService implementation)
+IClaudeService / ClaudeService  (singleton, graceful degradation if key absent)
+ │  system prompt built dynamically from ResumeSections + Projects (IMemoryCache)
  │
-Anthropic Claude API  (via Anthropic.SDK NuGet)
+Anthropic.SDK  →  Anthropic Messages API  (claude-sonnet-4-5)
  │
-Response
+Response  (token usage logged via Serilog)
 ```
 
-If the AI endpoint fails, the rest of the portfolio is completely unaffected.
+No existing controller, view, or service was modified. If the AI endpoint fails, the portfolio continues working without interruption.
 
 ### Key Components
 
-| Component | Description |
+| Component | Notes |
 |---|---|
-| `Anthropic.SDK` NuGet package | Anthropic's official .NET SDK |
-| `IAiService` / `AnthropicAiService` | Service abstraction — encapsulates SDK calls; injectable and testable |
-| `AiController` (`POST /api/ai/chat`) | Accepts `{message: string}`, returns `{reply: string}` |
-| Portfolio-aware system prompt | Grounds Claude in name, skills, projects, career goals; enforces portfolio-only scope |
-| `_AiChatWidget.cshtml` partial | Floating chat button + message thread panel; vanilla JS `fetch()` to `/api/ai/chat` |
-| Rate limiting | Fixed-window 5 req/min/IP — stricter than the contact form policy |
-| Serilog request logging | Message, response, token counts — required for cost tracking |
-| Anthropic dashboard spend cap | **Set before enabling in production** |
+| `Anthropic.SDK` NuGet | Anthropic's official .NET SDK |
+| `IClaudeService` / `ClaudeService` | Singleton service abstraction; gracefully disabled if `Anthropic:ApiKey` absent |
+| `AiController` (`POST /api/ai/chat`) | `[ApiController]` + attribute routing; `app.MapControllers()` added to pipeline |
+| Dynamic system prompt | Built from live `ResumeSections` + `Projects` DB data; cached via `IMemoryCache` |
+| `"ai-chat"` rate limit policy | Added to existing `AddRateLimiter` block — separate from `"contact-form"` |
+| `_ChatWidget.cshtml` | Self-contained partial with embedded CSS; `textContent` rendering (XSS-safe) |
+| `wwwroot/js/chat.js` | Fetch, IIFE-scoped, handles 429/503/network errors explicitly |
+| Serilog token logging | Input/output token counts logged per request for cost visibility |
+| `Anthropic__ApiKey` env var | Injected via `.env.production` + Docker Compose — never in source control |
 
 ### Tasks
 
 | # | Task | Notes |
 |---|------|-------|
-| 1 | 🔲 Add `Anthropic.SDK` NuGet package | Anthropic's official .NET SDK |
-| 2 | 🔲 Register `AnthropicClient` in `Program.cs` | Reads API key from `Anthropic:ApiKey` environment config |
-| 3 | 🔲 Create `IAiService` interface and `AnthropicAiService` implementation | Encapsulates SDK calls; injectable and mockable |
-| 4 | 🔲 Create `AiController` with `POST /api/ai/chat` endpoint | Accepts `{message: string}`, returns `{reply: string}` |
-| 5 | 🔲 Write portfolio-aware system prompt | Name, skills, projects, career goals, topic boundaries |
-| 6 | 🔲 Add rate limiting to `/api/ai/chat` | 5 req/min/IP; separate policy from contact form |
-| 7 | 🔲 Log all AI requests via Serilog | Message, response, token counts — cost tracking |
-| 8 | 🔲 Build `_AiChatWidget.cshtml` partial view | Floating button; message thread panel; vanilla JS `fetch()` |
-| 9 | 🔲 Add `<partial name="_AiChatWidget" />` to `_Layout.cshtml` | Single-line change — site-wide |
-| 10 | 🔲 Set monthly spend cap in Anthropic dashboard | Do this before enabling in production |
-| 11 | 🔲 Production smoke test of AI widget | Widget loads, message sent, response received, rate limit enforced |
+| 1 | ✅ Install `Anthropic.SDK` NuGet package | `dotnet add package Anthropic.SDK` |
+| 2 | ✅ Configure API key | `appsettings.json` placeholder; real key via `Anthropic__ApiKey` env var on server |
+| 3 | ✅ Create `IClaudeService` interface | `AskAsync(string, CancellationToken)` + `IsConfigured` — decouples controller from SDK |
+| 4 | ✅ Create `ClaudeService` implementation | Singleton; graceful degradation; Serilog token logging; catch-and-return error handling |
+| 5 | ✅ Build dynamic system prompt | Reads `ResumeSections` + `Projects` from DB at startup; cached via `IMemoryCache` |
+| 6 | ✅ Register service in `Program.cs` | `AddSingleton<IClaudeService, ClaudeService>()` + `AddMemoryCache()` |
+| 7 | ✅ Add `"ai-chat"` rate limiter policy | Fixed-window, 5 req/min/IP, added to existing `AddRateLimiter` block |
+| 8 | ✅ Create `AiController` | `POST /api/ai/chat`; `[ApiController]`; `app.MapControllers()` added to pipeline |
+| 9 | ✅ Build `_ChatWidget.cshtml` + `chat.js` | Floating panel, loading/error states, XSS-safe `textContent` rendering |
+| 10 | ✅ Inject into `_Layout.cshtml` | `<partial name="_ChatWidget" />` + `chat.js` before `</body>` — site-wide |
+| 11 | 🔲 Deploy to production and smoke test | Pending — will use `--no-deps codefolio-web` container-only restart to preserve zero downtime |
+
+### Local Validation Results
+
+*(production deployment and its own post-deploy smoke test are still pending — see Task 11 above)*
+
+| Test | Result |
+|---|---|
+| `/health` still returns `Healthy` | ✅ Pass (local) |
+| `POST /api/ai/chat` returns a coherent response (real Anthropic key) | ✅ Pass (local) |
+| Rate limiting — 6th concurrent request returns HTTP 429 | ✅ Pass (local) |
+| Serilog logs show `InputTokens`/`OutputTokens` per request | ✅ Pass (local) |
+| `ClaudeService configured: True` in startup logs | ✅ Pass (local) |
+| `Anthropic__ApiKey` absent from source, logs, and response headers | ✅ Pass |
+| Existing pages (Home/Project/BlogPost/Contact/Login) still return 200 | ✅ Pass (local) |
 
 ---
 
@@ -288,7 +306,7 @@ If the AI endpoint fails, the rest of the portfolio is completely unaffected.
 
 ## Current Status
 
-**Phases 1 through 3 are complete and tagged in git. CodeFolio is live in production.**
+**Phases 1 through 3 are complete, tagged, and live in production. Phase 4 (AI assistant) is code complete and committed to `main`, validated in local testing — not yet deployed.**
 
 | Phase | Git Reference | Status |
 |-------|---------|--------|
@@ -296,10 +314,10 @@ If the AI endpoint fails, the rest of the portfolio is completely unaffected.
 | Phase 1.5 — Dev Environment Containerization | commit `b65e015` | ✅ Complete |
 | Phase 2 — Production Hardening | tag `phase-2-production-hardening` → commit `0b1eb67` | ✅ Complete |
 | Phase 3 — DigitalOcean VPS Deployment | tag `phase-3-production-deployment` | ✅ Complete — live at https://codefolio2ai.com |
-| Phase 4 — AI Assistant Integration | — | 🔲 Planned — not started |
+| Phase 4 — AI Assistant Integration | commit `ff1a903` (untagged) | 🔶 Code complete, tested locally — not yet deployed |
 | Phase 5 — Production Operations | — | 🔲 Planned — not started |
 
-**CodeFolio is live in production at https://codefolio2ai.com.** Full smoke test passed July 29, 2026 (see `PHASE_3_DEPLOYMENT.md`). Known non-blocking limitation: SendGrid email delivery blocked by account credit limit — an external account issue; contact form persistence is unaffected. Tasks 14–15 from Phase 3 (deployment update workflow + PostgreSQL backup) are deferred to Phase 5.
+**CodeFolio is live in production at https://codefolio2ai.com** (Phase 3, without the AI assistant). The Claude-powered AI assistant (Phase 4) is implemented, committed, and validated end-to-end in local testing with a real Anthropic API key, but has not yet been deployed to the production VPS. Known non-blocking limitation: SendGrid email delivery blocked by account credit limit — contact form DB persistence is unaffected. Tasks 14–15 from Phase 3 (deployment update workflow + PostgreSQL backup) are deferred to Phase 5.
 
 Daily local dev workflow:
 

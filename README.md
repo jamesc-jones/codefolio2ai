@@ -1,6 +1,56 @@
 # CodeFolio
 
-An ASP.NET Core 9 MVC portfolio application using Razor views, EF Core with PostgreSQL, and ASP.NET Core Identity.
+An ASP.NET Core 9 MVC portfolio application using Razor views, EF Core with PostgreSQL, and ASP.NET Core Identity. Live at **https://codefolio2ai.com**.
+
+## About
+
+CodeFolio is a full-stack portfolio platform built end-to-end — from a raw ASP.NET Core MVC scaffold through production hardening, containerized deployment, and AI integration. It demonstrates production software development practices across the full lifecycle: secure configuration management, Docker Compose orchestration, Nginx reverse proxy with TLS, and a Claude-powered AI assistant that answers visitor questions about the portfolio owner's experience and projects.
+
+## AI Assistant — Phase 4 (code complete, not yet deployed)
+
+A Claude-powered chat assistant, embeddable on every page of the portfolio, lets visitors ask natural-language questions about skills, projects, experience, and architecture decisions, and receive context-aware answers grounded in the portfolio's actual content. It's implemented, committed, and tested end-to-end locally with a real Anthropic API key — not yet deployed to production.
+
+### Architecture
+
+```
+Visitor (browser)
+    │
+Chat Widget  (_ChatWidget.cshtml + chat.js)
+    │  vanilla JS fetch, IIFE-scoped, handles 429/503/network errors
+    │
+POST /api/ai/chat  (AiController — attribute-routed, [ApiController])
+    │  Rate limited: 5 requests/minute/IP  →  HTTP 429 on limit
+    │
+IClaudeService / ClaudeService  (registered singleton)
+    │  Graceful degradation: returns HTTP 503 if API key absent
+    │
+Dynamic System Prompt  (IMemoryCache — built from ResumeSections + Projects at startup)
+    │
+Anthropic.SDK  →  Anthropic Messages API (claude-sonnet-4-5)
+    │
+Response  (token usage logged via Serilog)
+```
+
+The AI layer is entirely additive. No existing controller, view, service, or database table was modified. If the AI endpoint fails, the portfolio continues working without interruption.
+
+### Security
+
+- **API key isolation:** `Anthropic__ApiKey` is injected via environment variable at container startup (`docker-compose.production.yml` + `.env.production` on the server). The key is never present in source code, Docker images, or response headers.
+- **Rate limiting:** A dedicated `"ai-chat"` fixed-window policy (5 req/min/IP) is enforced server-side via ASP.NET Core's built-in `Microsoft.AspNetCore.RateLimiting` — the same infrastructure used for the contact form, extended with a second policy.
+- **XSS prevention:** All AI response text is rendered via JavaScript's `textContent` (not `innerHTML`), preventing model-generated HTML from executing in the browser.
+- **Graceful degradation:** `ClaudeService` logs a startup warning and returns HTTP 503 if the API key is absent or invalid — no exception reaches the host process.
+
+### Key Technical Decisions
+
+**Dynamic context over static prompts.** The system prompt is built from live database content (`ResumeSections`, `Projects`) at application startup and cached in `IMemoryCache`. This means the AI's knowledge of the portfolio stays in sync with the admin's content — no manual prompt edits needed when the portfolio is updated.
+
+**Service abstraction.** The Anthropic SDK is encapsulated behind `IClaudeService`, keeping `AiController` decoupled from any specific AI provider. Swapping Claude for a different model requires changing only `ClaudeService`, not the controller or widget.
+
+**Additive deployment (planned).** Deploying this feature will only require restarting the `codefolio-web` container (`docker compose up -d --no-deps codefolio-web`) — Nginx and PostgreSQL stay running throughout, preserving zero downtime.
+
+**Token observability.** Input and output token counts are logged per request via Serilog, providing cost visibility without requiring external monitoring tooling.
+
+---
 
 ## Development Setup
 
@@ -33,11 +83,16 @@ An ASP.NET Core 9 MVC portfolio application using Razor views, EF Core with Post
        "ApiKey": "CONFIGURE_SENDGRID_LOCALLY",
        "FromEmail": "your-email@example.com",
        "FromName": "CodeFolio"
+     },
+     "Anthropic": {
+       "ApiKey": "<your Anthropic API key>",
+       "Model": "claude-sonnet-4-5",
+       "MaxTokens": 1024
      }
    }
    ```
 
-   `SendGrid:ApiKey` can remain as a placeholder during local development — the app degrades gracefully (contact form submissions are saved to the database, email delivery is skipped with a log warning).
+   Both `SendGrid:ApiKey` and `Anthropic:ApiKey` can remain as placeholders during local development — each service degrades gracefully if the key is absent (a startup warning is logged and the feature returns an appropriate error response without crashing the application).
 
 4. Start PostgreSQL:
 
