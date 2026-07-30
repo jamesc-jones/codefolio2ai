@@ -63,6 +63,14 @@ Instead, production secrets come from **environment variables**, supplied via th
 
 Environment variables override matching keys from `appsettings.json`/`appsettings.Production.json` at runtime, so the checked-in placeholder files can stay generic while each deployment target supplies its own real values out-of-band.
 
+**Always run `docker-compose.production.yml` commands with `--env-file .env.production` specified explicitly**, e.g.:
+
+```
+docker compose -f docker-compose.production.yml --env-file .env.production up -d
+```
+
+Docker Compose automatically loads a `.env` file from the current directory if one is present, even when it isn't passed via `--env-file`. Since the repo root already has a `.env` for local development (Postgres credentials, and now `ANTHROPIC_API_KEY` for local testing), running a production compose command without `--env-file .env.production` can silently fall back to those development values instead of failing loudly.
+
 ## Architecture
 
 Standard ASP.NET Core MVC layout, all under `CodeFolio/`:
