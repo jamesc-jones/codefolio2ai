@@ -165,3 +165,9 @@ Phase 4 adds a Claude-powered AI assistant to the portfolio. The feature is enti
 **Observability:** `ClaudeService` logs the input and output token count of every API response via Serilog, enabling cost visibility without any external billing dashboard monitoring.
 
 *Full tutorial: `PHASE_4_AI_ASSISTANT.md`.*
+
+### Phase 5 — Production Hardening (in progress)
+
+Repository-side preparation is complete: an automated backup script (`pg_dump` + gzip + 14-day retention), a three-scenario disaster recovery runbook (app container failure, database container failure, full VPS loss — each ending in a shared post-recovery verification checklist covering health/auth/projects/blog/contact/AI), a GitHub Actions deploy workflow (`.github/workflows/deploy.yml`, syntax-validated but not yet wired to real secrets), and updated Nginx security headers (`nginx/codefolio.conf` now includes HSTS, a codebase-verified Content-Security-Policy, and Permissions-Policy, with syntax validated locally via a throwaway `nginx:alpine` container).
+
+**Not yet done:** none of this has been applied to the live server. The backup script and cron job aren't installed, the Nginx config change hasn't been `scp`'d/reloaded, the CI/CD pipeline has no GitHub secrets configured, and monitoring (UptimeRobot) and domain email require creating external accounts. See `PHASE_5_PRODUCTION_HARDENING.md` for the exact manual steps and what's still pending in each sub-phase.

@@ -257,7 +257,7 @@ Rate-limit behavior (5 req/min/IP) and the earlier local validation pass (empty-
 
 **Objective:** Operate CodeFolio as a production-grade system with automated backups, monitoring, reliable deployment, and hardened security posture.
 
-**Status: 🔲 PLANNED — NOT STARTED. Includes deferred tasks from Phase 3 (Tasks 14–15).**
+**Status: 🟡 Phase 5 — Production Hardening in progress. Repository-side preparation (scripts, configs, CI/CD workflow file, disaster recovery runbook) is complete; VPS execution, external accounts (UptimeRobot, GHCR PAT, email provider), and DNS changes are still pending. Full tutorial: `PHASE_5_PRODUCTION_HARDENING.md`. Includes deferred tasks from Phase 3 (Tasks 14–15).**
 
 ### Scope
 
@@ -266,7 +266,7 @@ Rate-limit behavior (5 req/min/IP) and the earlier local validation pass (empty-
 | **PostgreSQL Backup** | `pg_dump` cron (3 AM daily, 14-day local retention); off-site to DigitalOcean Spaces; restore procedure tested against scratch DB (carried from Phase 3, Task 15) |
 | **Deployment Update Workflow** | Exercise and document the `docker build → scp → docker load → compose up --no-deps` cycle with a real code update; verify rollback via image re-tag (carried from Phase 3, Task 14) |
 | **Monitoring & Alerts** | Health endpoint polling; uptime alert (e.g., UptimeRobot free tier or DO Monitoring on `/health`); Serilog error-level alert integration |
-| **Disaster Recovery** | Documented step-by-step procedure: Droplet replacement, volume migration, DNS cutover; target RTO < 1 hour |
+| **Disaster Recovery** | Documented step-by-step procedure: app container failure, database container failure, Droplet replacement/DNS cutover; target RTO < 2 hours |
 | **CI/CD Pipeline** | GitHub Actions: build → test → publish → Docker image push → deploy-on-push (or manual approval gate) |
 | **Security Headers Hardening** | Enable HSTS (`Strict-Transport-Security`) in Nginx after HTTPS is stable; validate via securityheaders.com; consider Content-Security-Policy |
 | **Domain Email Setup** | Configure SPF, DKIM, DMARC for the production sending domain; verify SendGrid sender authentication; resolve current "Maximum credits exceeded" account limit |
@@ -275,13 +275,13 @@ Rate-limit behavior (5 req/min/IP) and the earlier local validation pass (empty-
 
 | # | Task | Notes |
 |---|------|-------|
-| 1 | 🔲 Set up `pg_dump` backup cron + test restore | See `PHASE_3_DEPLOYMENT.md` Task 15 for the documented script |
-| 2 | 🔲 Test deployment update workflow end-to-end | Push a trivial code change through the full `docker build → scp → load → restart` cycle |
-| 3 | 🔲 Configure uptime monitoring on `/health` | UptimeRobot or DigitalOcean Monitoring; alert on status change |
-| 4 | 🔲 Document disaster recovery procedure | Droplet replacement + volume restore; target RTO < 1 hour |
-| 5 | 🔲 Set up GitHub Actions CI/CD pipeline | Build + publish + Docker image build on push to `main` |
-| 6 | 🔲 Enable HSTS in Nginx config | Uncomment `Strict-Transport-Security` header; only after HTTPS has been stable ≥ 7 days |
-| 7 | 🔲 Resolve domain email / SendGrid account | Fix "Maximum credits exceeded"; configure SPF/DKIM/DMARC on sending domain |
+| 1 | 🔶 Backup script prepared, not yet installed | Script + cron + restore procedure written in `PHASE_5_PRODUCTION_HARDENING.md` 5.1; requires manual VPS execution |
+| 2 | 🔲 Test deployment update workflow end-to-end | Blocked on Task 5 (CI/CD) validation |
+| 3 | 🔲 Configure uptime monitoring on `/health` | Instructions ready (5.2); requires creating an UptimeRobot account |
+| 4 | ✅ Document disaster recovery procedure | `PHASE_5_PRODUCTION_HARDENING.md` 5.3 — app container failure, DB container failure, and full VPS loss, each with a post-recovery verification checklist |
+| 5 | 🔶 GitHub Actions workflow created, not yet active | `.github/workflows/deploy.yml` exists and is YAML-valid; requires `VPS_HOST`/`VPS_SSH_KEY` secrets and a GHCR cutover before it can deploy anything |
+| 6 | 🔶 HSTS + CSP + Permissions-Policy added to `nginx/codefolio.conf` locally, syntax-validated | Not yet applied to the live server — requires `scp` + `nginx -t` + reload (5.5) |
+| 7 | 🔲 Resolve domain email / SendGrid account | Instructions ready (5.6); requires an email provider account and live DNS changes |
 
 ---
 
@@ -313,7 +313,7 @@ Rate-limit behavior (5 req/min/IP) and the earlier local validation pass (empty-
 | Phase 2 — Production Hardening | tag `phase-2-production-hardening` → commit `0b1eb67` | ✅ Complete |
 | Phase 3 — DigitalOcean VPS Deployment | tag `phase-3-production-deployment` | ✅ Complete — live at https://codefolio2ai.com |
 | Phase 4 — AI Assistant Integration | tag `phase-4-ai-assistant` | ✅ Complete — verified live at https://codefolio2ai.com on 2026-07-30 |
-| Phase 5 — Production Operations | — | 🔲 Planned — not started |
+| Phase 5 — Production Operations | — | 🟡 In progress — repo-side prep complete, VPS execution pending |
 
 **CodeFolio is live in production at https://codefolio2ai.com**, including the Claude-powered AI assistant. Known non-blocking limitation: SendGrid email delivery blocked by account credit limit — contact form DB persistence is unaffected. Tasks 14–15 from Phase 3 (deployment update workflow + PostgreSQL backup) are deferred to Phase 5.
 

@@ -50,6 +50,10 @@ The AI layer is entirely additive. No existing controller, view, service, or dat
 
 **Token observability.** Input and output token counts are logged per request via Serilog, providing cost visibility without requiring external monitoring tooling.
 
+## Production Hardening — Phase 5 (in progress)
+
+Repository-side work is complete: an automated PostgreSQL backup script with 14-day retention, a three-scenario disaster recovery runbook, a GitHub Actions CI/CD workflow, and updated Nginx security headers (HSTS, a Content-Security-Policy verified against the app's actual resource usage, Permissions-Policy). None of it has been applied to the live server yet — see `PHASE_5_PRODUCTION_HARDENING.md` for what's done vs. what still requires manual VPS access or an external account.
+
 ---
 
 ## Development Setup

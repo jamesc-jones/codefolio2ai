@@ -1,0 +1,110 @@
+name: Build and Deploy to Production
+
+# Not yet active as a real deployment pipeline: VPS_HOST and VPS_SSH_KEY secrets
+# are not configured, and the production compose file still points at a locally
+# loaded image (codefolio:latest), not GHCR. See PHASE_5_PRODUCTION_HARDENING.md
+# Phase 5.4 for the remaining manual setup steps before this can deploy anything.
+# Until then, the existing build -> save -> scp -> load -> compose up workflow
+# documented in PHASE_3_DEPLOYMENT.md / PHASE_4_AI_ASSISTANT.md remains authoritative.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:   # allows manual trigger from the GitHub Actions UI
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/codefolio
+
+jobs:
+  build-and-push:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write   # required to push to GHCR
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata (tags and labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=,suffix=,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./CodeFolio
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Production VPS
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: production   # optional: configure required reviewers in GitHub Environments
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: deploy
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -euo pipefail
+
+            IMAGE="ghcr.io/${{ github.repository_owner }}/codefolio"
+
+            # Preserve a real rollback target: tag whatever is currently running
+            # as ":previous" BEFORE pulling the new image over ":latest".
+            CURRENT_ID=$(docker inspect --format='{{.Image}}' codefolio_web 2>/dev/null || echo "")
+            if [[ -n "${CURRENT_ID}" ]]; then
+              docker tag "${CURRENT_ID}" "${IMAGE}:previous" || true
+            fi
+
+            docker pull "${IMAGE}:latest"
+
+            # Restart only the web container — Nginx and Postgres stay running
+            cd /home/deploy/codefolio
+            docker compose -f docker-compose.production.yml --env-file .env.production \
+              up -d --no-deps codefolio-web
+
+            # Wait for the container to start and verify health
+            sleep 10
+            HEALTH=$(curl -sf https://codefolio2ai.com/health || echo "FAILED")
+            echo "Health check result: ${HEALTH}"
+
+            if [[ "${HEALTH}" != "Healthy" ]]; then
+              echo "ERROR: Health check failed after deploy. Rolling back..."
+              if docker image inspect "${IMAGE}:previous" > /dev/null 2>&1; then
+                docker tag "${IMAGE}:previous" "${IMAGE}:latest"
+                docker compose -f docker-compose.production.yml --env-file .env.production \
+                  up -d --no-deps codefolio-web
+              else
+                echo "No :previous image available — manual rollback required (see Phase 5.4e)."
+              fi
+              exit 1
+            fi
+
+            echo "Deploy successful. Health: ${HEALTH}"
+
+            # Clean up dangling images to free disk space
+            docker image prune -f
