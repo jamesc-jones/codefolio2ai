@@ -168,7 +168,7 @@ Phase 4 adds a Claude-powered AI assistant to the portfolio. The feature is enti
 
 ### Phase 5 — Production Hardening ✅ COMPLETE
 
-> *Completed 2026-07-30. Automated backups, uptime monitoring, disaster recovery validation, and Nginx security hardening verified live at https://codefolio2ai.com. Not yet tagged.*
+> *Completed 2026-07-30. Automated backups, uptime monitoring, disaster recovery validation, Nginx security hardening, and the GitHub Actions CI/CD pipeline all verified live at https://codefolio2ai.com. Not yet tagged.*
 
 **Automated Backups:** A `pg_dump` + gzip backup script runs daily via cron on the production VPS (3 AM, 14-day retention), writing to `/opt/backups/codefolio` as `codefolio_YYYY_MM_DD_HHMMSS.sql.gz`. A restore was verified end-to-end against a temporary throwaway database on the same Postgres container — the live `codefolio` database and `pgdata` volume are never touched by the test.
 
@@ -178,6 +178,8 @@ Phase 4 adds a Claude-powered AI assistant to the portfolio. The feature is enti
 
 **Nginx Security Hardening:** `nginx/codefolio.conf` was updated with HSTS, Permissions-Policy, and a Content-Security-Policy built from the app's actual verified resource usage (`cdn.jsdelivr.net` for Bootstrap, `cdnjs.cloudflare.com` for Font Awesome, `'self'`-only images and connections) rather than a generic policy — the original draft in an earlier tutorial pass would have broken every icon on the site. Deployed to the live server; `curl -I https://codefolio2ai.com` confirms all headers present and the CSP matches exactly.
 
-**Follow-up (not blocking this completion):** CI/CD cutover (`.github/workflows/deploy.yml` exists and is YAML-valid, but `VPS_HOST`/`VPS_SSH_KEY` secrets aren't configured and the compose file still loads a local image rather than GHCR) and domain email (SendGrid remains blocked by its account credit limit) are prepared but not yet executed — see `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md` §5.4 and §5.6.
+**CI/CD Pipeline:** `.github/workflows/deploy.yml` runs `test` (restores, builds, runs `CodeFolio.Tests`) → `build-and-push` (builds the image, pushes to `ghcr.io/jamesc-jones/codefolio`, using `docker/setup-buildx-action@v3` for GHA cache export) → `deploy` (SSHes to the VPS, tags the running image as `:previous`, `docker compose pull` + `up -d --no-deps codefolio-web`, verifies `/health`, auto-rolls-back on failure). Verified on a real GitHub Actions run against production: all three jobs succeeded (`test` 39s, `build-and-push` 3m 6s, `deploy` 23s), and `/health` plus all core routes were independently re-checked live immediately after.
+
+**Follow-up (not blocking this completion):** domain email (SendGrid remains blocked by its account credit limit) is prepared but not yet executed — see `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md` §5.6.
 
 *Full tutorials: `PHASE_5_PRODUCTION_HARDENING.md`, `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md`.*
