@@ -144,9 +144,9 @@ Phase 3 took CodeFolio live at **https://codefolio2ai.com** on a DigitalOcean VP
 
 *Full tutorial and task log: `PHASE_3_DEPLOYMENT.md`.*
 
-### Phase 4 — AI Assistant Integration (code complete, not yet deployed)
+### Phase 4 — AI Assistant Integration ✅ COMPLETE
 
-> *Committed to `main` (commit `ff1a903`); tested locally end-to-end with a real Anthropic API key. No git tag exists yet and nothing has been deployed to the production VPS.*
+> *Git tag: `phase-4-ai-assistant`. Deployed to production and independently verified live at https://codefolio2ai.com on 2026-07-30 — `/health` returns `Healthy`, `POST /api/ai/chat` returns a real grounded reply, and the chat widget works end-to-end in a live browser session.*
 
 Phase 4 adds a Claude-powered AI assistant to the portfolio. The feature is entirely additive — no existing controller, view, service, or database schema was modified.
 
@@ -160,7 +160,7 @@ Phase 4 adds a Claude-powered AI assistant to the portfolio. The feature is enti
 
 **Chat Widget:** `_ChatWidget.cshtml` is a self-contained partial view (scoped CSS embedded, no external stylesheet) injected into `_Layout.cshtml` before `</body>`, making it available on every page. `wwwroot/js/chat.js` is an IIFE-scoped vanilla JavaScript fetch client with explicit handling for HTTP 429, 503, network failures, and a loading state. All AI response text is rendered via `textContent` (not `innerHTML`), preventing XSS from any model output.
 
-**Secrets and Deployment (planned, not yet executed):** `Anthropic__ApiKey` follows the same `__`-separator env var convention established in Phase 2. Deployment will require adding the real key to `/home/deploy/codefolio/.env.production` on the server (already passed through in `docker-compose.production.yml`) and restarting only the `codefolio-web` container (`--no-deps`), leaving Nginx and Postgres running throughout to preserve zero downtime — the same pattern used for prior config-only changes.
+**Secrets and Deployment:** `Anthropic__ApiKey` follows the same `__`-separator env var convention established in Phase 2 — added to `/home/deploy/codefolio/.env.production` on the server and passed through `docker-compose.production.yml`. Deployed following the same additive, container-only restart pattern used for prior config-only changes.
 
 **Observability:** `ClaudeService` logs the input and output token count of every API response via Serilog, enabling cost visibility without any external billing dashboard monitoring.
 

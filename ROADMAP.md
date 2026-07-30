@@ -1,6 +1,6 @@
 # CodeFolio — Project Development Roadmap
 
-> **Last Updated:** 2026-07-30 — Phase 4 (AI Assistant) code complete, committed, tested locally; not yet deployed  
+> **Last Updated:** 2026-07-30 — Phase 4 (AI Assistant) complete, deployed, and verified live in production  
 > **Stack:** ASP.NET Core 9 MVC · Razor Views · EF Core · PostgreSQL · ASP.NET Core Identity · SendGrid  
 > **Target:** DigitalOcean VPS · Docker Compose · Claude AI Assistant
 
@@ -183,7 +183,7 @@ Orchestrated by: docker-compose.production.yml
 
 **Objective:** Add a Claude-powered AI assistant to the portfolio.
 
-**Status: 🔶 CODE COMPLETE — implemented, committed to `main`, and validated end-to-end in local testing with a real Anthropic API key. Not yet deployed to production.**  
+**Status: ✅ COMPLETE — deployed and independently verified live in production on 2026-07-30.**  
 **Full tutorial:** `PHASE_4_AI_ASSISTANT.md` at the solution root.
 
 ### Architecture
@@ -237,21 +237,19 @@ No existing controller, view, or service was modified. If the AI endpoint fails,
 | 8 | ✅ Create `AiController` | `POST /api/ai/chat`; `[ApiController]`; `app.MapControllers()` added to pipeline |
 | 9 | ✅ Build `_ChatWidget.cshtml` + `chat.js` | Floating panel, loading/error states, XSS-safe `textContent` rendering |
 | 10 | ✅ Inject into `_Layout.cshtml` | `<partial name="_ChatWidget" />` + `chat.js` before `</body>` — site-wide |
-| 11 | 🔲 Deploy to production and smoke test | Pending — will use `--no-deps codefolio-web` container-only restart to preserve zero downtime |
+| 11 | ✅ Deploy to production and smoke test | Container-only restart (`--no-deps codefolio-web`); verified live 2026-07-30 |
 
-### Local Validation Results
-
-*(production deployment and its own post-deploy smoke test are still pending — see Task 11 above)*
+### Production Validation Results (2026-07-30)
 
 | Test | Result |
 |---|---|
-| `/health` still returns `Healthy` | ✅ Pass (local) |
-| `POST /api/ai/chat` returns a coherent response (real Anthropic key) | ✅ Pass (local) |
-| Rate limiting — 6th concurrent request returns HTTP 429 | ✅ Pass (local) |
-| Serilog logs show `InputTokens`/`OutputTokens` per request | ✅ Pass (local) |
-| `ClaudeService configured: True` in startup logs | ✅ Pass (local) |
+| `GET https://codefolio2ai.com/health` returns `Healthy` | ✅ Pass — verified live |
+| `POST https://codefolio2ai.com/api/ai/chat` returns a coherent, grounded response | ✅ Pass — verified live (200 OK, ~4.4s latency) |
 | `Anthropic__ApiKey` absent from source, logs, and response headers | ✅ Pass |
-| Existing pages (Home/Project/BlogPost/Contact/Login) still return 200 | ✅ Pass (local) |
+| Chat widget renders and completes a full round-trip in a live browser session | ✅ Pass — verified via Playwright against the live domain |
+| No new browser console errors introduced (only the pre-existing, documented `jquery.validate.unobtrusive` 404 remains) | ✅ Pass |
+
+Rate-limit behavior (5 req/min/IP) and the earlier local validation pass (empty-message 400, concurrent 429s, Serilog token logging, `ClaudeService configured: True` at startup) were already confirmed during local testing prior to deployment.
 
 ---
 
@@ -306,7 +304,7 @@ No existing controller, view, or service was modified. If the AI endpoint fails,
 
 ## Current Status
 
-**Phases 1 through 3 are complete, tagged, and live in production. Phase 4 (AI assistant) is code complete and committed to `main`, validated in local testing — not yet deployed.**
+**Phases 1 through 4 are complete, tagged, and live in production, including the AI assistant.**
 
 | Phase | Git Reference | Status |
 |-------|---------|--------|
@@ -314,10 +312,10 @@ No existing controller, view, or service was modified. If the AI endpoint fails,
 | Phase 1.5 — Dev Environment Containerization | commit `b65e015` | ✅ Complete |
 | Phase 2 — Production Hardening | tag `phase-2-production-hardening` → commit `0b1eb67` | ✅ Complete |
 | Phase 3 — DigitalOcean VPS Deployment | tag `phase-3-production-deployment` | ✅ Complete — live at https://codefolio2ai.com |
-| Phase 4 — AI Assistant Integration | commit `ff1a903` (untagged) | 🔶 Code complete, tested locally — not yet deployed |
+| Phase 4 — AI Assistant Integration | tag `phase-4-ai-assistant` | ✅ Complete — verified live at https://codefolio2ai.com on 2026-07-30 |
 | Phase 5 — Production Operations | — | 🔲 Planned — not started |
 
-**CodeFolio is live in production at https://codefolio2ai.com** (Phase 3, without the AI assistant). The Claude-powered AI assistant (Phase 4) is implemented, committed, and validated end-to-end in local testing with a real Anthropic API key, but has not yet been deployed to the production VPS. Known non-blocking limitation: SendGrid email delivery blocked by account credit limit — contact form DB persistence is unaffected. Tasks 14–15 from Phase 3 (deployment update workflow + PostgreSQL backup) are deferred to Phase 5.
+**CodeFolio is live in production at https://codefolio2ai.com**, including the Claude-powered AI assistant. Known non-blocking limitation: SendGrid email delivery blocked by account credit limit — contact form DB persistence is unaffected. Tasks 14–15 from Phase 3 (deployment update workflow + PostgreSQL backup) are deferred to Phase 5.
 
 Daily local dev workflow:
 

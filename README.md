@@ -6,9 +6,9 @@ An ASP.NET Core 9 MVC portfolio application using Razor views, EF Core with Post
 
 CodeFolio is a full-stack portfolio platform built end-to-end — from a raw ASP.NET Core MVC scaffold through production hardening, containerized deployment, and AI integration. It demonstrates production software development practices across the full lifecycle: secure configuration management, Docker Compose orchestration, Nginx reverse proxy with TLS, and a Claude-powered AI assistant that answers visitor questions about the portfolio owner's experience and projects.
 
-## AI Assistant — Phase 4 (code complete, not yet deployed)
+## AI Assistant — Phase 4
 
-A Claude-powered chat assistant, embeddable on every page of the portfolio, lets visitors ask natural-language questions about skills, projects, experience, and architecture decisions, and receive context-aware answers grounded in the portfolio's actual content. It's implemented, committed, and tested end-to-end locally with a real Anthropic API key — not yet deployed to production.
+A Claude-powered chat assistant is live on every page of the portfolio. Visitors can ask natural-language questions about skills, projects, experience, and architecture decisions, and receive context-aware answers grounded in the portfolio's actual content.
 
 ### Architecture
 
@@ -46,7 +46,7 @@ The AI layer is entirely additive. No existing controller, view, service, or dat
 
 **Service abstraction.** The Anthropic SDK is encapsulated behind `IClaudeService`, keeping `AiController` decoupled from any specific AI provider. Swapping Claude for a different model requires changing only `ClaudeService`, not the controller or widget.
 
-**Additive deployment (planned).** Deploying this feature will only require restarting the `codefolio-web` container (`docker compose up -d --no-deps codefolio-web`) — Nginx and PostgreSQL stay running throughout, preserving zero downtime.
+**Additive deployment.** Deployed via a container-only restart (`docker compose up -d --no-deps codefolio-web`) — Nginx and PostgreSQL kept running throughout.
 
 **Token observability.** Input and output token counts are logged per request via Serilog, providing cost visibility without requiring external monitoring tooling.
 
