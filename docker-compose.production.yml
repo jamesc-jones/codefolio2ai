@@ -18,7 +18,10 @@ services:
     volumes:
       - ./nginx/codefolio.conf:/etc/nginx/conf.d/codefolio.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - certbot-webroot:/var/www/certbot
+      # Host bind mount (not a named volume): the host's certbot process writes
+      # ACME challenge files here directly in webroot mode, and Nginx must serve
+      # that exact same directory. See PHASE_6_MANUAL_PRODUCTION_EXECUTION.md.
+      - /var/www/certbot:/var/www/certbot
     depends_on:
       - codefolio-web
     networks:
@@ -39,6 +42,7 @@ services:
       - Anthropic__ApiKey=${ANTHROPIC_API_KEY}
     volumes:
       - app-logs:/app/logs
+      - dataprotection-keys:/app/keys
     depends_on:
       postgres:
         condition: service_healthy
@@ -72,4 +76,6 @@ networks:
 volumes:
   pgdata:
   app-logs:
-  certbot-webroot:
+  dataprotection-keys:
+  # certbot-webroot was removed: it's now a host bind mount (/var/www/certbot)
+  # so the host's certbot process and Nginx share the identical directory.

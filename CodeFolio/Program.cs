@@ -1,6 +1,7 @@
 using CodeFolio.Data;
 using CodeFolio.Models;
 using CodeFolio.Services;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -50,6 +51,16 @@ try
         options.LoginPath = "/Identity/Account/Login";
         options.AccessDeniedPath = "/Home/AccessDenied";
     });
+
+    // Persist DataProtection keys to a mounted volume in production so container
+    // restarts/redeploys don't generate a fresh key ring and invalidate every
+    // existing login cookie. Left as the framework default in Development.
+    if (!builder.Environment.IsDevelopment())
+    {
+        builder.Services.AddDataProtection()
+            .SetApplicationName("CodeFolio")
+            .PersistKeysToFileSystem(new DirectoryInfo("/app/keys"));
+    }
 
     // Inject our SendGrid email sender
     builder.Services.AddSingleton<IEmailSender, EmailSender>();

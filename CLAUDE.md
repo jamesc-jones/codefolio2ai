@@ -182,4 +182,18 @@ Phase 4 adds a Claude-powered AI assistant to the portfolio. The feature is enti
 
 **Follow-up (not blocking this completion):** domain email (SendGrid remains blocked by its account credit limit) is prepared but not yet executed — see `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md` §5.6.
 
+### Phase 6 — Production Refinement & Portfolio Optimization ⏳ IN PROGRESS
+
+> *Code/config for the first two reliability fixes is complete and locally validated (`dotnet build`, `docker compose config`, `nginx -t`). Not yet exercised against the live VPS — see `PHASE_6_MANUAL_PRODUCTION_EXECUTION.md` for the remaining manual steps. SEO, testing, and analytics work has not started; Phase 6 is not complete.*
+
+**✅ ASP.NET Core DataProtection key persistence:** Previously, nothing in `Program.cs` configured a persistent key ring, so every container restart or redeploy — including the CI/CD pipeline's own `up -d --no-deps codefolio-web` on every push to `main` — silently generated a fresh DataProtection key ring and invalidated every existing login cookie, forcing unplanned re-authentication with no visible error. `Program.cs` now calls `builder.Services.AddDataProtection().SetApplicationName("CodeFolio").PersistKeysToFileSystem(new DirectoryInfo("/app/keys"))`, gated behind `!builder.Environment.IsDevelopment()` so local `dotnet run` keeps the framework's default behavior unchanged. `docker-compose.production.yml` adds a `dataprotection-keys` named Docker volume mounted at `/app/keys` on `codefolio-web` — Docker-managed (not a host bind mount), never committed to source control, and not reachable from outside the container.
+
+**✅ Zero-downtime Certbot webroot renewal:** The certificate was originally issued via `certbot certonly --standalone`, which binds directly to port 80 and therefore requires briefly stopping Nginx; the renewal cron inherited the same method, so every ~60-day renewal caused a brief outage. `nginx/codefolio.conf` already served `/.well-known/acme-challenge/` from `/var/www/certbot` since Phase 3 issuance, but it was unused because that path was a Docker-managed named volume with no predictable host-filesystem location for the host's certbot process to write into. `docker-compose.production.yml`'s `nginx` service now bind-mounts the **host** directory `/var/www/certbot` directly, giving the host's certbot process (running in webroot mode) and the Nginx container the exact same physical directory. Nginx never needs to stop for a renewal under this scheme.
+
+**Why now:** both were flagged as known gaps in Phase 5's "Known Improvements" section — small, well-understood fixes to real reliability issues, prioritized ahead of SEO/analytics work so every deploy for the rest of Phase 6 is safer by default.
+
+**What's still manual:** this development session has no SSH access to the production droplet. The code and compose-file changes are correct and locally validated, but the VPS's own separate copies of `docker-compose.production.yml` and `/etc/letsencrypt/renewal/codefolio2ai.com.conf` must be updated by hand over SSH, then verified with `certbot renew --dry-run` and a container-restart key-ring check. Full runbook: `PHASE_6_MANUAL_PRODUCTION_EXECUTION.md`.
+
+**Deferred within Phase 6:** SEO, expanded automated test coverage, and analytics integration have not started.
+
 *Full tutorials: `PHASE_5_PRODUCTION_HARDENING.md`, `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md`.*
