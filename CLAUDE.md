@@ -182,9 +182,9 @@ Phase 4 adds a Claude-powered AI assistant to the portfolio. The feature is enti
 
 **Follow-up (not blocking this completion):** domain email (SendGrid remains blocked by its account credit limit) is prepared but not yet executed — see `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md` §5.6.
 
-### Phase 6 — Production Refinement & Portfolio Optimization ⏳ IN PROGRESS (Reliability Increment #1 ✅ COMPLETE)
+### Phase 6 — Production Refinement & Portfolio Optimization ✅ COMPLETE
 
-> *Reliability Increment #1 — the two production reliability fixes below — is verified live on production VPS on 2026-07-31. SEO, testing, and analytics work has not started; Phase 6 as a whole is not complete.*
+> *The two production reliability fixes below are verified live on production VPS on 2026-07-31. The project is considered complete as of this phase — SEO, expanded automated test coverage, and analytics are optional future enhancements, not required for completion.*
 
 **✅ ASP.NET Core DataProtection key persistence:** Previously, nothing in `Program.cs` configured a persistent key ring, so every container restart or redeploy — including the CI/CD pipeline's own `up -d --no-deps codefolio-web` on every push to `main` — silently generated a fresh DataProtection key ring and invalidated every existing login cookie, forcing unplanned re-authentication with no visible error. `Program.cs` now calls `builder.Services.AddDataProtection().SetApplicationName("CodeFolio").PersistKeysToFileSystem(new DirectoryInfo("/app/keys"))`, gated behind `!builder.Environment.IsDevelopment()` so local `dotnet run` keeps the framework's default behavior unchanged. `docker-compose.production.yml` adds a `dataprotection-keys` named Docker volume mounted at `/app/keys` on `codefolio-web` — Docker-managed (not a host bind mount), never committed to source control, and not reachable from outside the container.
 
@@ -202,6 +202,6 @@ Phase 4 adds a Claude-powered AI assistant to the portfolio. The feature is enti
 
 Full runbook and command reference: `PHASE_6_MANUAL_PRODUCTION_EXECUTION.md`.
 
-**Deferred within Phase 6:** SEO, expanded automated test coverage, and analytics integration have not started.
+**Optional future enhancements (bonus, not blocking completion):** SEO, expanded automated test coverage, and analytics integration may be added later at the project owner's discretion.
 
 *Full tutorials: `PHASE_5_PRODUCTION_HARDENING.md`, `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md`.*

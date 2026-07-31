@@ -341,9 +341,9 @@ Independently re-verified outside the CI log itself: `curl -s https://codefolio2
 
 ---
 
-## Phase 6 — Production Refinement & Portfolio Optimization
+## Phase 6 — Production Refinement & Portfolio Optimization ✅ COMPLETE
 
-**Status: Reliability Increment #1 complete, verified live on production VPS on 2026-07-31.** The two highest-value production reliability fixes identified in Phase 5's "Known Improvements" are implemented and verified directly against the droplet. SEO, testing, and analytics work has not started.
+**Status: Complete, verified live on production VPS on 2026-07-31.** The two highest-value production reliability fixes identified in Phase 5's "Known Improvements" are implemented and verified directly against the droplet. SEO, expanded automated test coverage, and analytics are optional future enhancements — not required for project completion — and remain unstarted by choice.
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
@@ -365,7 +365,7 @@ Independently re-verified outside the CI log itself: `curl -s https://codefolio2
 
 Full step-by-step runbook and command reference: `PHASE_6_MANUAL_PRODUCTION_EXECUTION.md`.
 
-**Deferred (not started):** SEO improvements, automated test coverage expansion, analytics integration, and any other portfolio-optimization work — explicitly out of scope for this increment.
+**Optional future enhancements (bonus, not blocking completion):** SEO improvements, automated test coverage expansion, and analytics integration. These may be picked up later at the project owner's discretion but are not required — the project is considered complete as of this phase.
 
 ---
 
@@ -388,7 +388,7 @@ Full step-by-step runbook and command reference: `PHASE_6_MANUAL_PRODUCTION_EXEC
 
 ## Current Status
 
-**Phases 1 through 5 are complete and live in production, including the AI assistant, automated backups, monitoring, and Nginx security hardening.**
+**Phases 1 through 6 are complete and live in production, including the AI assistant, automated backups, monitoring, Nginx security hardening, persistent DataProtection keys, and zero-downtime certificate renewal. The project is complete as-is; SEO, expanded automated testing, and analytics remain available as optional future enhancements.**
 
 | Phase | Git Reference | Status |
 |-------|---------|--------|
@@ -398,7 +398,7 @@ Full step-by-step runbook and command reference: `PHASE_6_MANUAL_PRODUCTION_EXEC
 | Phase 3 — DigitalOcean VPS Deployment | tag `phase-3-production-deployment` | ✅ Complete — live at https://codefolio2ai.com |
 | Phase 4 — AI Assistant Integration | tag `phase-4-ai-assistant` | ✅ Complete — verified live at https://codefolio2ai.com on 2026-07-30 |
 | Phase 5 — Production Operations | *(not yet tagged)* | ✅ Complete — backups, monitoring, disaster recovery, Nginx security headers, and the GitHub Actions CI/CD pipeline all verified live on 2026-07-30; domain email remains as optional follow-up (see Phase 5 section above) |
-| Phase 6 — Production Refinement & Portfolio Optimization | *(not yet tagged)* | ⏳ In progress — Reliability Increment #1 (DataProtection key persistence, webroot Certbot renewal) ✅ verified live on the production VPS on 2026-07-31 (see `PHASE_6_MANUAL_PRODUCTION_EXECUTION.md`); SEO/testing/analytics not started |
+| Phase 6 — Production Refinement & Portfolio Optimization | *(not yet tagged)* | ✅ Complete — DataProtection key persistence and webroot Certbot renewal verified live on the production VPS on 2026-07-31 (see `PHASE_6_MANUAL_PRODUCTION_EXECUTION.md`); SEO, testing, and analytics remain as optional future enhancements |
 
 **CodeFolio is live in production at https://codefolio2ai.com**, including the Claude-powered AI assistant, automated daily database backups, UptimeRobot monitoring, hardened Nginx security headers (HSTS, CSP, Permissions-Policy), and a fully automated GitHub Actions CI/CD pipeline (push to `main` → test → build → push to GHCR → SSH deploy → health-verified, with automatic rollback). Known non-blocking limitation: SendGrid email delivery blocked by account credit limit (contact form DB persistence is unaffected) — domain email is prepared but not yet cut over (see Phase 5's "Remaining Follow-Up").
 
