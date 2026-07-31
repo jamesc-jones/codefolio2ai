@@ -182,9 +182,9 @@ Phase 4 adds a Claude-powered AI assistant to the portfolio. The feature is enti
 
 **Follow-up (not blocking this completion):** domain email (SendGrid remains blocked by its account credit limit) is prepared but not yet executed — see `PHASE_5_MANUAL_PRODUCTION_EXECUTION.md` §5.6.
 
-### Phase 6 — Production Refinement & Portfolio Optimization ⏳ IN PROGRESS
+### Phase 6 — Production Refinement & Portfolio Optimization ⏳ IN PROGRESS (Reliability Increment #1 ✅ COMPLETE)
 
-> *Code/config for the first two reliability fixes is complete and locally validated (`dotnet build`, `docker compose config`, `nginx -t`). Not yet exercised against the live VPS — see `PHASE_6_MANUAL_PRODUCTION_EXECUTION.md` for the remaining manual steps. SEO, testing, and analytics work has not started; Phase 6 is not complete.*
+> *Reliability Increment #1 — the two production reliability fixes below — is verified live on production VPS on 2026-07-31. SEO, testing, and analytics work has not started; Phase 6 as a whole is not complete.*
 
 **✅ ASP.NET Core DataProtection key persistence:** Previously, nothing in `Program.cs` configured a persistent key ring, so every container restart or redeploy — including the CI/CD pipeline's own `up -d --no-deps codefolio-web` on every push to `main` — silently generated a fresh DataProtection key ring and invalidated every existing login cookie, forcing unplanned re-authentication with no visible error. `Program.cs` now calls `builder.Services.AddDataProtection().SetApplicationName("CodeFolio").PersistKeysToFileSystem(new DirectoryInfo("/app/keys"))`, gated behind `!builder.Environment.IsDevelopment()` so local `dotnet run` keeps the framework's default behavior unchanged. `docker-compose.production.yml` adds a `dataprotection-keys` named Docker volume mounted at `/app/keys` on `codefolio-web` — Docker-managed (not a host bind mount), never committed to source control, and not reachable from outside the container.
 
@@ -192,7 +192,15 @@ Phase 4 adds a Claude-powered AI assistant to the portfolio. The feature is enti
 
 **Why now:** both were flagged as known gaps in Phase 5's "Known Improvements" section — small, well-understood fixes to real reliability issues, prioritized ahead of SEO/analytics work so every deploy for the rest of Phase 6 is safer by default.
 
-**What's still manual:** this development session has no SSH access to the production droplet. The code and compose-file changes are correct and locally validated, but the VPS's own separate copies of `docker-compose.production.yml` and `/etc/letsencrypt/renewal/codefolio2ai.com.conf` must be updated by hand over SSH, then verified with `certbot renew --dry-run` and a container-restart key-ring check. Full runbook: `PHASE_6_MANUAL_PRODUCTION_EXECUTION.md`.
+**Phase 6 Completion Verification (2026-07-31, performed directly against the production VPS):**
+- Persistent DataProtection keys survive container recreation — a full `docker compose down` → `up -d` cycle recreated all three containers (`codefolio_nginx`, `codefolio_web`, `codefolio_postgres_prod`), and the same key file (`key-c7138ba2-5d83-4b8c-84e2-dd68f6f83f5f.xml`) was present in `/app/keys` before and after, with correct ownership/permissions
+- Authentication cookies survive deployments as a direct consequence of the above
+- Certbot migrated from standalone to webroot — `/etc/letsencrypt/renewal/codefolio2ai.com.conf` updated to `authenticator = webroot` / `webroot_path = /var/www/certbot`
+- Zero-downtime certificate renewal path verified — `sudo certbot renew --dry-run` reported all simulated renewals succeeded, with no Nginx stop/restart involved
+- Production Nginx ACME challenge verified — a manually placed test file under the host's `/var/www/certbot` was served correctly at `http://codefolio2ai.com/.well-known/acme-challenge/test.txt`
+- `docker exec codefolio_nginx nginx -t` confirmed the live Nginx configuration is syntactically valid
+
+Full runbook and command reference: `PHASE_6_MANUAL_PRODUCTION_EXECUTION.md`.
 
 **Deferred within Phase 6:** SEO, expanded automated test coverage, and analytics integration have not started.
 

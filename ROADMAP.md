@@ -343,12 +343,12 @@ Independently re-verified outside the CI log itself: `curl -s https://codefolio2
 
 ## Phase 6 — Production Refinement & Portfolio Optimization
 
-**Status: In progress.** First increment — the two highest-value production reliability fixes identified in Phase 5's "Known Improvements" — is code-complete and locally validated. SEO, testing, and analytics work has not started.
+**Status: Reliability Increment #1 complete, verified live on production VPS on 2026-07-31.** The two highest-value production reliability fixes identified in Phase 5's "Known Improvements" are implemented and verified directly against the droplet. SEO, testing, and analytics work has not started.
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 1 | ✅ Persist ASP.NET Core DataProtection keys | Code-complete, locally validated | `Program.cs` now calls `AddDataProtection().SetApplicationName("CodeFolio").PersistKeysToFileSystem(new DirectoryInfo("/app/keys"))`, gated to non-Development so local dev behavior is unchanged. `docker-compose.production.yml` adds a `dataprotection-keys` named volume mounted at `/app/keys` on `codefolio-web` — never bind-mounted to a host path, never committed to source control. |
-| 2 | ✅ Convert Certbot renewal from standalone to webroot mode | Code/config-complete, locally validated | `docker-compose.production.yml`'s `nginx` service now bind-mounts the host directory `/var/www/certbot` directly (was a Docker-managed named volume, which has no predictable host path for the host's certbot process to write into). `nginx/codefolio.conf`'s existing `/.well-known/acme-challenge/` location block (already present since Phase 3, previously unused) now has a real path to serve from. |
+| 1 | ✅ Persist ASP.NET Core DataProtection keys | Verified live on production VPS | `Program.cs` calls `AddDataProtection().SetApplicationName("CodeFolio").PersistKeysToFileSystem(new DirectoryInfo("/app/keys"))`, gated to non-Development so local dev behavior is unchanged. `docker-compose.production.yml` adds a `dataprotection-keys` named volume mounted at `/app/keys` on `codefolio-web`. Verified via a full `docker compose down` / `up -d` container recreation on the VPS: the same key file (`key-c7138ba2-5d83-4b8c-84e2-dd68f6f83f5f.xml`) was present both before and after recreation. |
+| 2 | ✅ Convert Certbot renewal from standalone to webroot mode | Verified live on production VPS | `docker-compose.production.yml`'s `nginx` service bind-mounts the host directory `/var/www/certbot` directly; `/etc/letsencrypt/renewal/codefolio2ai.com.conf` on the VPS updated to `authenticator = webroot` / `webroot_path = /var/www/certbot`. Verified via `docker exec codefolio_nginx nginx -t` (syntax ok), a manual ACME test file served successfully at `http://codefolio2ai.com/.well-known/acme-challenge/test.txt`, and `sudo certbot renew --dry-run` reporting "Congratulations, all simulated renewals succeeded" — with no Nginx stop/restart required. |
 
 **Why these were prioritized:** both were flagged in Phase 5's "Known Improvements" as low-effort, real reliability gaps rather than new features — one causes silent forced re-authentication on every deploy, the other causes brief downtime on every ~60-day certificate renewal. Fixing both before starting SEO/analytics work means every subsequent deploy this phase is safer by default.
 
@@ -356,7 +356,14 @@ Independently re-verified outside the CI log itself: `curl -s https://codefolio2
 - **DataProtection persistence** — previously every container restart or redeploy (including the CI/CD pipeline's own `up -d --no-deps codefolio-web` on every push to `main`) generated a brand-new DataProtection key ring, silently invalidating every existing login cookie. Admins and any authenticated user would be logged out on every deploy with no error surfaced. Persisting the key ring to a volume means auth cookies now survive restarts and redeploys.
 - **Webroot Certbot renewal** — the certificate was originally issued via `certbot certonly --standalone`, which requires briefly stopping Nginx to rebind port 80; the renewal cron inherited the same method, meaning every ~60-day renewal caused a brief production outage. Webroot mode lets Certbot satisfy the ACME HTTP challenge through a file Nginx serves while remaining up the entire time — renewal becomes a zero-downtime event.
 
-**What's NOT done yet:** the code and compose-file changes above take effect locally and via `dotnet build`/`docker compose config` validation, but the actual production VPS has its own separate copies of `docker-compose.production.yml` and `/etc/letsencrypt/renewal/codefolio2ai.com.conf` that must be updated manually over SSH — this session had no SSH credentials to the droplet. Full step-by-step commands, including the `certbot renew --dry-run` verification and the key-ring-survives-a-restart check, are in `PHASE_6_MANUAL_PRODUCTION_EXECUTION.md`. Neither item should be marked verified-live in this table until that runbook has actually been executed against the droplet.
+**Verification notes (2026-07-31, performed on the production VPS):**
+- DataProtection key persistence verified through a full `docker compose down` → `up -d` container recreation test (all three containers — `codefolio_nginx`, `codefolio_web`, `codefolio_postgres_prod` — cleanly removed and restarted)
+- Docker volume persistence confirmed — the DataProtection key file survived container recreation with correct ownership/permissions (`-rw------- codefolio codefolio`)
+- Nginx configuration validated via `docker exec codefolio_nginx nginx -t` — syntax ok
+- ACME challenge path validated end-to-end — a test file written to the host webroot was served correctly over HTTP at `/.well-known/acme-challenge/test.txt`
+- Certbot webroot renewal dry run succeeded — `sudo certbot renew --dry-run` reported all simulated renewals succeeded, with Nginx remaining up throughout
+
+Full step-by-step runbook and command reference: `PHASE_6_MANUAL_PRODUCTION_EXECUTION.md`.
 
 **Deferred (not started):** SEO improvements, automated test coverage expansion, analytics integration, and any other portfolio-optimization work — explicitly out of scope for this increment.
 
@@ -391,7 +398,7 @@ Independently re-verified outside the CI log itself: `curl -s https://codefolio2
 | Phase 3 — DigitalOcean VPS Deployment | tag `phase-3-production-deployment` | ✅ Complete — live at https://codefolio2ai.com |
 | Phase 4 — AI Assistant Integration | tag `phase-4-ai-assistant` | ✅ Complete — verified live at https://codefolio2ai.com on 2026-07-30 |
 | Phase 5 — Production Operations | *(not yet tagged)* | ✅ Complete — backups, monitoring, disaster recovery, Nginx security headers, and the GitHub Actions CI/CD pipeline all verified live on 2026-07-30; domain email remains as optional follow-up (see Phase 5 section above) |
-| Phase 6 — Production Refinement & Portfolio Optimization | *(not yet tagged)* | ⏳ In progress — DataProtection key persistence and webroot Certbot renewal are code-complete and locally validated, pending manual VPS execution (see `PHASE_6_MANUAL_PRODUCTION_EXECUTION.md`); SEO/testing/analytics not started |
+| Phase 6 — Production Refinement & Portfolio Optimization | *(not yet tagged)* | ⏳ In progress — Reliability Increment #1 (DataProtection key persistence, webroot Certbot renewal) ✅ verified live on the production VPS on 2026-07-31 (see `PHASE_6_MANUAL_PRODUCTION_EXECUTION.md`); SEO/testing/analytics not started |
 
 **CodeFolio is live in production at https://codefolio2ai.com**, including the Claude-powered AI assistant, automated daily database backups, UptimeRobot monitoring, hardened Nginx security headers (HSTS, CSP, Permissions-Policy), and a fully automated GitHub Actions CI/CD pipeline (push to `main` → test → build → push to GHCR → SSH deploy → health-verified, with automatic rollback). Known non-blocking limitation: SendGrid email delivery blocked by account credit limit (contact form DB persistence is unaffected) — domain email is prepared but not yet cut over (see Phase 5's "Remaining Follow-Up").
 

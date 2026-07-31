@@ -1,6 +1,6 @@
 # Phase 6 — Manual Production Execution Runbook
 
-> **Status:** Instructions only. Nothing in this document has been executed against the production droplet. No VPS command below has been run on your behalf, and neither Phase 6 reliability item is actually live until you've performed these steps yourself and verified the result.
+> **Status:** ✅ Executed and verified against the production droplet on 2026-07-31. Both Phase 6 reliability items below are live. Retained as the reference runbook for how the verification was performed and for any future re-run (e.g. after a droplet rebuild).
 > **Purpose:** Step-by-step operational runbook for rolling out the two Phase 6 production-reliability changes — persistent DataProtection keys and webroot-mode Certbot renewal — with zero downtime.
 > **References:** `Program.cs`, `docker-compose.production.yml`, `nginx/codefolio.conf`, `ROADMAP.md`, `CLAUDE.md`.
 
@@ -174,3 +174,14 @@ Also manually verify in a browser:
 - No unexpected re-authentication after the container restart in 6.1.3
 
 Once both sections are executed and verified, update `ROADMAP.md`'s Phase 6 table to mark them ✅ with the real dates and results — the same convention used for every prior phase in this repo.
+
+---
+
+## Execution result (2026-07-31)
+
+Both sections above were executed against the production droplet and verified:
+
+- **6.1 DataProtection:** `docker compose down` → `up -d` recreated all three containers; `key-c7138ba2-5d83-4b8c-84e2-dd68f6f83f5f.xml` in `/app/keys` was identical before and after, confirming the key ring survives full container recreation.
+- **6.2 Certbot webroot:** `docker exec codefolio_nginx nginx -t` passed; a manually placed test file was served correctly at `http://codefolio2ai.com/.well-known/acme-challenge/test.txt`; `sudo certbot renew --dry-run` reported all simulated renewals succeeded with no Nginx downtime.
+
+See `ROADMAP.md` (Phase 6 section) and `CLAUDE.md` (Phase 6 section) for the canonical record of these results.
